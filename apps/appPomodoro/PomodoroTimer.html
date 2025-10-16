@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Tone.js for sound effects -->
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.58/build/Tone.js"></script>
+    <!-- Lucide Icons (for the settings and dark/light mode) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* BASE CONFIG - Shared across themes */
+        :root {
+            --color-primary: 220 38 38; /* Default Red 600 (Main Accent) */
+            --color-text: 17 24 39; /* Default light mode text (Gray 900) */
+            --color-text-on-primary: 255 255 255; /* White */
+            /* Initial application defaults (Light Mode) */
+            --color-background: 255 255 255; 
+            --color-card: 255 255 255; 
+            --color-task-bg-light: 249 250 251; /* Gray 50 for tasks background in light mode */
+            --color-task-completed-light: 229 231 235; /* Gray 200 for completed tasks background */
+            --color-shadow: 0 10px 15px -3px rgba(var(--color-primary), 0.1), 0 4px 6px -2px rgba(var(--color-primary), 0.05);
+        }
+
+        /* Dark Mode Configuration - Overrides base colors */
+        body[data-mode="dark"] {
+            --color-text: 249 250 251; /* Dark mode text (Gray 50) */
+            --color-background: 17 24 39; /* Base dark background (Gray 900) */
+            --color-card: 31 41 55; /* Dark Card (Gray 800) */
+            --color-task-bg-dark: 55 65 81; /* Gray 700 for tasks background in dark mode */
+            --color-task-completed-dark: 40 50 60; /* Darker background for completed tasks */
+            --color-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- THEME DEFINITIONS & MODE OVERRIDES (Adjusting background for better contrast) --- */
+        body[data-theme="red"] { --color-primary: 220 38 38; }
+        body[data-theme="red"][data-mode="light"] { --color-background: 254 242 242; }
+        body[data-theme="blue"] { --color-primary: 37 99 235; }
+        body[data-theme="blue"][data-mode="light"] { --color-background: 239 246 255; }
+        body[data-theme="emerald"] { --color-primary: 5 150 105; }
+        body[data-theme="emerald"][data-mode="light"] { --color-background: 236 253 245; }
+        body[data-theme="purple"] { --color-primary: 124 58 237; }
+        body[data-theme="purple"][data-mode="light"] { --color-background: 250 245 255; }
+        body[data-theme="citrus"] { --color-primary: 245 158 11; }
+        body[data-theme="citrus"][data-mode="light"] { --color-background: 255 251 235; }
+        body[data-theme="turquoise"] { --color-primary: 6 182 212; }
+        body[data-theme="turquoise"][data-mode="light"] { --color-background: 236 254 255; }
+        body[data-theme="pink"] { --color-primary: 236 72 153; }
+        body[data-theme="pink"][data-mode="light"] { --color-background: 253 242 248; }
+
+        /* --- UTILITY CLASSES --- */
+        .bg-app { background-color: rgb(var(--color-background)); }
+        .text-app { color: rgb(var(--color-text)); }
+        .bg-card { background-color: rgb(var(--color-card)); }
+        .text-primary { color: rgb(var(--color-primary)); }
+        .bg-primary { background-color: rgb(var(--color-primary)); }
+        .shadow-primary { box-shadow: var(--color-shadow); }
+        .border-primary { border-color: rgb(var(--color-primary)); }
+        
+        .bg-task { background-color: rgb(var(--color-task-bg-light, 249 250 251)); transition: background-color 0.3s; }
+        body[data-mode="dark"] .bg-task { background-color: rgb(var(--color-task-bg-dark, 55 65 81)); }
+        .bg-task-completed { background-color: rgb(var(--color-completed-light, 229 231 235)); opacity: 0.8; transition: background-color 0.3s; }
+        body[data-mode="dark"] .bg-task-completed { background-color: rgb(var(--color-task-completed-dark, 40 50 60)); opacity: 0.8; }
+        
+        /* Timer Circle Styling */
+        #timer-progress-circle {
+            transition: stroke-dashoffset 0.9s linear;
+            stroke: rgb(var(--color-primary));
+        }
+
+        /* Clock Styling */
+        .hand {
+            transform-origin: 50% 50%;
+            transition: transform 0.1s linear;
+            stroke: rgb(var(--color-text));
+        }
+        .hand.hour { stroke-width: 4; }
+        .hand.minute { stroke-width: 3; }
+        .hand.second { stroke-width: 2; stroke: rgb(var(--color-primary)); }
+        
+        /* Settings panel specific styling */
+        #settings-panel {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        #settings-panel.open {
+            transform: translateX(0);
+        }
+
+        /* Dynamic Grid Layout for Widget Column */
+        #main-grid-container {
+            /* Default layout (widgets hidden) - 1 column on mobile, 2 columns on medium screens */
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+        @media (min-width: 768px) {
+            #main-grid-container:not(.widgets-visible) {
+                 /* 2 columns (Pomodoro + Tasks) when widgets are hidden */
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1024px) {
+            /* 3 columns (Widgets + Pomodoro + Tasks) when widgets are visible */
+            #main-grid-container.widgets-visible {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        /* Widget Card Hover/Drag effect */
+        .widget-card {
+            cursor: grab;
+        }
+        .widget-card.dragging {
+            opacity: 0.4;
+        }
+
+        /* Clase para la línea de ocultar widget (Ahora Horizontal) */
+        .widget-hide-line {
+            display: block;
+            width: 18px; /* Ancho de la línea */
+            height: 3px; /* Grosor de la línea */
+            border-radius: 9999px; /* Para bordes redondeados (píldora) */
+            background-color: rgb(var(--color-primary));
+            transition: opacity 0.3s;
+        }
+        
+        /* FIX: Dynamic styling for mode buttons (Pomodoro modes) */
+        .btn-mode {
+            color: rgb(var(--color-text));
+            background-color: transparent;
+            transition: background-color 0.3s, color 0.3s, font-weight 0.1s;
+        }
+
+        /* FIX: Active state for Pomodoro mode buttons */
+        .btn-mode.active {
+            background-color: rgb(var(--color-primary));
+            color: rgb(var(--color-text-on-primary));
+            font-weight: 800; /* Extra bold for focus */
+        }
+        
+    </style>
+</head>
+<body class="bg-app text-app min-h-screen flex flex-col font-[Inter] transition-colors duration-500" data-theme="red" data-mode="light">
+
+    <!-- Settings Panel (Fixed on Left) -->
+    <div id="settings-panel" class="fixed top-0 left-0 h-full w-80 max-w-xs bg-card p-6 z-50 shadow-2xl overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-primary">Ajustes</h2>
+            <button onclick="toggleSettings()" class="p-2 rounded-full text-app hover:bg-app transition-colors">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <!-- 1. Timer Customizer -->
+        <div class="mb-8 border-b py-4 border-app/20">
+            <h3 class="text-lg font-semibold mb-3">Tiempo de Estudio (Minutos)</h3>
+            <div class="flex items-center justify-between bg-app rounded-lg p-3 shadow-inner">
+                <input type="number" id="study-time-input" min="1" max="60" value="25"
+                        class="w-full bg-transparent text-xl font-bold text-center focus:outline-none focus:ring-0 text-app"
+                        onchange="updateStudyTime(this.value)">
+            </div>
+        </div>
+
+        <!-- 2. Theme Selector -->
+        <div class="mb-8 border-b py-4 border-app/20">
+            <h3 class="text-lg font-semibold mb-3">Color de Tema</h3>
+            <div class="grid grid-cols-4 gap-3">
+                <!-- Theme Buttons -->
+                <button onclick="setTheme('red')" class="theme-btn w-12 h-12 rounded-full bg-red-600 border-transparent transition-all" title="Rojo"></button>
+                <button onclick="setTheme('blue')" class="theme-btn w-12 h-12 rounded-full bg-blue-600 border-transparent transition-all" title="Azul"></button>
+                <button onclick="setTheme('emerald')" class="theme-btn w-12 h-12 rounded-full bg-emerald-600 border-transparent transition-all" title="Esmeralda"></button>
+                <button onclick="setTheme('purple')" class="theme-btn w-12 h-12 rounded-full bg-violet-600 border-transparent transition-all" title="Púrpura"></button>
+                <button onclick="setTheme('citrus')" class="theme-btn w-12 h-12 rounded-full bg-amber-600 border-transparent transition-all" title="Cítrico"></button>
+                <button onclick="setTheme('turquoise')" class="theme-btn w-12 h-12 rounded-full bg-cyan-600 border-transparent transition-all" title="Turquesa"></button>
+                <button onclick="setTheme('pink')" class="theme-btn w-12 h-12 rounded-full bg-pink-600 border-transparent transition-all" title="Rosa"></button>
+            </div>
+        </div>
+
+        <!-- 3. Dark/Light Mode Toggle -->
+        <div class="mb-8 border-b py-4 border-app/20">
+            <h3 class="text-lg font-semibold mb-3">Modo de Visualización</h3>
+            <div class="flex items-center space-x-4">
+                <button onclick="setMode('light')" class="flex items-center p-3 rounded-full text-app hover:opacity-100 transition-opacity" id="light-mode-btn">
+                    <i data-lucide="sun"></i>
+                    <span class="ml-2">Claro</span>
+                </button>
+                <button onclick="setMode('dark')" class="flex items-center p-3 rounded-full text-app hover:opacity-100 transition-opacity" id="dark-mode-btn">
+                    <i data-lucide="moon"></i>
+                    <span class="ml-2">Oscuro</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Widget Column Toggle -->
+        <div class="mb-8 border-b py-4 border-app/20">
+            <h3 class="text-lg font-semibold mb-3">Barra de Widgets</h3>
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="toggle-widget-bar" class="w-5 h-5 form-checkbox text-primary rounded border-gray-300 focus:ring-primary" onchange="toggleWidgetColumn(this.checked)">
+                    <span class="text-app">Mostrar Barra de Widgets</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 5. New Widget Manager Section -->
+        <div class="mb-8 border-b py-4 border-app/20">
+            <h3 class="text-lg font-semibold mb-3">Gestionar Widgets Individuales</h3>
+            <div id="widget-manager-list" class="space-y-2">
+                <!-- Widget controls will be inserted here by JavaScript -->
+            </div>
+            <p id="no-hidden-widgets" class="text-sm opacity-50 italic mt-2 hidden">Todos los widgets están visibles.</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <header class="p-4 flex justify-between items-center w-full">
+        <!-- Settings/Theme Icon -->
+        <button onclick="toggleSettings()" class="p-2 rounded-full text-app hover:bg-card transition-colors">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <h1 class="text-xl font-extrabold text-primary">Pomodoro Timer</h1>
+        <!-- Placeholder for symmetry -->
+        <div class="w-10"></div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-4">
+
+        <!-- Timer and Task Manager Container (Dynamic Grid) -->
+        <div id="main-grid-container" class="w-full max-w-7xl grid gap-8 lg:gap-12 transition-all duration-300">
+            
+            <!-- COLUMN 1: WIDGETS ZONE (Hidden by default) -->
+            <div id="widget-zone" class="flex flex-col space-y-8 min-w-0" data-is-active="false">
+                
+                <!-- WIDGET 1: CLOCK -->
+                <div id="widget-clock" class="widget-card bg-card shadow-2xl rounded-3xl p-6 w-full text-center transition-colors duration-500" data-widget-id="clock" draggable="true" data-visible="true">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex space-x-2 items-center">
+						<button onclick="hideWidget('clock')" class="p-1 rounded-full text-app hover:opacity-70 transition-colors flex items-center justify-center" title="Ocultar widget">
+                                <span class="widget-hide-line"></span>
+                            </button>
+                            <button onclick="toggleClockMode()" class="p-1 rounded-full text-app hover:bg-app transition-colors" title="Cambiar modo de reloj">
+                                <i id="clock-mode-icon" data-lucide="clock" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Clock Display Container (Dynamic) -->
+                    <div id="clock-display" class="h-40 flex items-center justify-center">
+                        <!-- Content rendered by JS (Analog or Digital) -->
+                    </div>
+                </div>
+
+                <!-- WIDGET 2: CALENDAR -->
+                <div id="widget-calendar" class="widget-card bg-card shadow-2xl rounded-3xl p-6 w-full text-center transition-colors duration-500" data-widget-id="calendar" draggable="true" data-visible="true">
+                    <div class="flex justify-between items-center mb-4">
+                        <!-- ELEMENTO ACTUALIZADO: Línea de tema horizontal -->
+                        <button onclick="hideWidget('calendar')" class="p-1 rounded-full text-app hover:opacity-70 transition-colors flex items-center justify-center" title="Ocultar widget">
+                            <span class="widget-hide-line"></span>
+                        </button>
+                    </div>
+                    <div id="calendar-display">
+                        <p id="calendar-day-name" class="text-app text-xl font-semibold opacity-70 mb-1">Miércoles</p>
+                        <p id="calendar-day-month" class="text-app text-7xl font-extrabold text-primary leading-none">01</p>
+                        <p id="calendar-month-name" class="text-app text-3xl font-bold mt-2">Enero</p>
+                    </div>
+                </div>
+                
+                <!-- WIDGET 3: CUSTOM IMAGE UPLOAD -->
+                <div id="widget-image" class="widget-card bg-card shadow-2xl rounded-3xl p-6 w-full text-center transition-colors duration-500" data-widget-id="image" draggable="true" data-visible="true">
+                    <div class="flex justify-between items-center mb-4">
+                        <!-- ELEMENTO ACTUALIZADO: Línea de tema horizontal -->
+                        <button onclick="hideWidget('image')" class="p-1 rounded-full text-app hover:opacity-70 transition-colors flex items-center justify-center" title="Ocultar widget">
+                            <span class="widget-hide-line"></span>
+                        </button>
+                    </div>
+                    <div class="relative w-full h-40 bg-app rounded-xl overflow-hidden border-2 border-dashed border-app/30 flex items-center justify-center group">
+                        <img id="custom-image-display" src="" alt="Imagen de Personalización" class="absolute inset-0 w-full h-full object-cover hidden">
+                        
+                        <label for="image-upload" class="cursor-pointer flex flex-col items-center text-app/60 group-hover:text-primary transition-colors p-4">
+                            <i data-lucide="image" class="w-8 h-8 mb-2"></i>
+                            <span id="image-upload-label" class="text-sm font-medium">Subir imagen</span>
+                        </label>
+                        
+                        <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        
+                        <button id="image-remove-btn" onclick="removeCustomImage()" class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-opacity hidden" title="Quitar imagen">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- COLUMN 2: POMODORO TIMER -->
+            <div id="pomodoro-column" class="flex flex-col items-center">
+                <!-- Timer Mode Selector: Changed to grid-cols-3 for consistent button width -->
+                <div class="bg-card shadow-primary rounded-full p-2 mb-10 grid grid-cols-3 gap-2 transition-colors duration-500 w-full max-w-sm">
+                    <button id="study-mode" onclick="setModeTimer('study')" class="btn-mode px-2 py-3 rounded-full text-sm font-semibold whitespace-nowrap active">Estudio</button>
+                    <button id="short-break-mode" onclick="setModeTimer('short')" class="btn-mode px-2 py-3 rounded-full text-sm font-semibold whitespace-nowrap">Descanso Corto</button>
+                    <button id="long-break-mode" onclick="setModeTimer('long')" class="btn-mode px-2 py-3 rounded-full text-sm font-semibold whitespace-nowrap">Descanso Largo</button>
+                </div>
+
+                <!-- Timer Display with Circular Progress -->
+                <div id="timer-display-container" class="bg-card shadow-2xl rounded-3xl p-8 sm:p-12 w-full max-w-lg text-center transition-colors duration-500">
+                    
+                    <div class="relative w-64 h-64 mx-auto">
+                        <!-- SVG for Circular Progress -->
+                        <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 120 120">
+                            <!-- Background Circle -->
+                            <circle r="56" cx="60" cy="60" fill="transparent" stroke="rgb(var(--color-text), 0.1)" stroke-width="8"></circle>
+                            <!-- Progress Circle (Dynamic) -->
+                            <circle id="timer-progress-circle"
+                                    r="56" cx="60" cy="60" fill="transparent"
+                                    stroke-width="8"
+                                    stroke-linecap="round"
+                                    style="transform: rotate(-90deg); transform-origin: 50% 50%; stroke-dasharray: 351.86; stroke-dashoffset: 351.86;">
+                            </circle>
+                        </svg>
+                        
+                        <!-- Timer Text in the Center -->
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div id="timer-display" class="text-app text-7xl sm:text-8xl font-extrabold select-none">25:00</div>
+                        </div>
+                    </div>
+
+                    <p id="timer-message" class="text-lg mt-4 text-primary font-medium opacity-80">¡Listo para empezar!</p>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="mt-10 flex space-x-6">
+                    <button id="start-pause-btn" onclick="startPauseTimer()" class="btn-main bg-primary text-white font-extrabold uppercase py-4 px-12 rounded-xl shadow-lg shadow-primary/50 text-xl tracking-wider">
+                        Comenzar
+                    </button>
+                    <button id="reset-btn" onclick="resetTimer()" class="btn-main bg-gray-300 text-gray-800 font-extrabold uppercase py-4 px-12 rounded-xl shadow-lg hover:bg-gray-400 transition-colors hidden">
+                        Reiniciar
+                    </button>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: TASK MANAGER -->
+            <div id="task-manager-column" class="bg-card shadow-2xl rounded-3xl p-6 w-full min-h-[400px] transition-colors duration-500">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-primary">Mis Tareas</h2>
+                    <button onclick="openTaskModal()" class="bg-primary text-white p-2 rounded-full shadow-lg hover:opacity-90 transition-opacity" title="Añadir nueva tarea">
+                        <i data-lucide="plus" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <p id="no-tasks-message" class="text-center opacity-50 italic mt-8 text-app">Añade tu primera tarea.</p>
+                <!-- Task List Container -->
+                <div id="tasks-list" class="space-y-3 max-h-[480px] md:max-h-[500px] lg:max-h-[70vh] overflow-y-auto pr-2">
+                    <!-- Tasks will be rendered here by JavaScript -->
+                </div>
+            </div>
+
+        </div> <!-- End of grid container -->
+        
+    </main>
+
+    <footer class="p-4 text-center text-xs opacity-50 text-app">
+        <!-- Pie de página vacío según la solicitud -->
+    </footer>
+
+    <!-- Task Modal (Hidden by default) -->
+    <div id="task-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-card rounded-xl p-6 w-11/12 max-w-lg shadow-2xl">
+            <h3 id="task-modal-title" class="text-2xl font-bold text-primary mb-4">Añadir Nueva Tarea</h3>
+            <form id="task-form">
+                <input type="hidden" id="task-id-to-edit"> <!-- Campo oculto para edición -->
+                <div class="mb-4">
+                    <label for="task-name" class="block text-sm font-medium text-app mb-1">Nombre de la Tarea</label>
+                    <input type="text" id="task-name" required class="w-full p-2 border rounded-lg bg-card focus:border-primary focus:ring-primary">
+                </div>
+                <div class="mb-4">
+                    <label for="task-description" class="block text-sm font-medium text-app mb-1">Descripción</label>
+                    <textarea id="task-description" rows="3" class="w-full p-2 border rounded-lg bg-card focus:border-primary focus:ring-primary"></textarea>
+                </div>
+                <div class="mb-6">
+                    <label for="task-deadline" class="block text-sm font-medium text-app mb-1">Recordatorio (Fecha/Hora)</label>
+                    <input type="datetime-local" id="task-deadline" class="w-full p-2 border rounded-lg bg-card focus:border-primary focus:ring-primary">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" id="task-submit-btn" class="px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity">Guardar Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Custom Modal for Confirmation (Used instead of window.confirm) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-card rounded-xl p-6 w-11/12 max-w-sm shadow-2xl text-app">
+            <h3 class="text-xl font-bold mb-3">Confirmación</h3>
+            <p id="confirm-message" class="mb-6">¿Estás seguro?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirm-cancel" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Cancelar</button>
+                <button id="confirm-ok" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const DEFAULT_STUDY_TIME_S = 25 * 60;
+        const SHORT_BREAK_TIME_S = 5 * 60;
+        const LONG_BREAK_TIME_S = 15 * 60;
+        const CIRCUMFERENCE = 2 * Math.PI * 56;
+        
+        const LS_WIDGET_CONFIG = 'widgetConfig';
+        const LS_WIDGET_BAR_VISIBLE = 'widgetBarVisible';
+        const LS_WIDGET_MODE = 'widgetClockMode';
+        const LS_CUSTOM_IMAGE = 'widgetCustomImage';
+        
+        const INITIAL_WIDGETS = [
+            { id: 'clock', visible: true, name: 'Hora Actual' },
+            { id: 'calendar', visible: true, name: 'Fecha' },
+            { id: 'image', visible: true, name: 'Fondo Personal' }
+        ];
+
+        // --- GLOBAL VARIABLES ---
+        let currentMode = 'study';
+        let remainingTime = DEFAULT_STUDY_TIME_S;
+        let totalTimeForMode = DEFAULT_STUDY_TIME_S;
+        let isRunning = false;
+        let intervalId = null;
+        let studyTimeCustom = DEFAULT_STUDY_TIME_S; 
+        
+        let tasks = []; 
+
+        let clockIntervalId = null;
+        let clockMode = localStorage.getItem(LS_WIDGET_MODE) || 'digital';
+        let widgetConfig = []; // Stores order and visibility of widgets
+
+        const clockDisplay = document.getElementById('clock-display');
+        const clockModeIcon = document.getElementById('clock-mode-icon');
+        const customImageDisplay = document.getElementById('custom-image-display');
+        const imageUploadLabel = document.getElementById('image-upload-label');
+        const imageRemoveBtn = document.getElementById('image-remove-btn');
+        const widgetZone = document.getElementById('widget-zone');
+        const mainGridContainer = document.getElementById('main-grid-container');
+
+        // Sound generator (Tone.js)
+        const synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.005,
+                decay: 0.1,
+                sustain: 0.1,
+                release: 0.5
+            }
+        }).toDestination();
+
+
+        // ----------------------------------------------------------------------
+        // --- WIDGET & DRAG/DROP LOGIC -----------------------------------------
+        // ----------------------------------------------------------------------
+        
+        /**
+         * Loads widget configuration (order and visibility) from localStorage or uses default.
+         */
+        function loadWidgetConfig() {
+            try {
+                const storedConfig = JSON.parse(localStorage.getItem(LS_WIDGET_CONFIG));
+                if (Array.isArray(storedConfig) && storedConfig.length === INITIAL_WIDGETS.length) {
+                    // Check if all initial widgets exist in storedConfig, add missing ones if necessary (for updates)
+                    const storedIds = storedConfig.map(w => w.id);
+                    const finalConfig = [...storedConfig];
+                    
+                    INITIAL_WIDGETS.forEach(initialW => {
+                        if (!storedIds.includes(initialW.id)) {
+                            finalConfig.push(initialW);
+                        }
+                    });
+                    
+                    // Simple filter to ensure we only keep defined widgets (in case old configs are dirty)
+                    widgetConfig = finalConfig.filter(w => INITIAL_WIDGETS.map(iw => iw.id).includes(w.id));
+                    
+                } else {
+                    widgetConfig = INITIAL_WIDGETS;
+                }
+            } catch (e) {
+                console.error("Error loading widget config, using default.", e);
+                widgetConfig = INITIAL_WIDGETS;
+            }
+            renderWidgets();
+        }
+
+        /**
+         * Saves current widget configuration (order and visibility) to localStorage.
+         */
+        function saveWidgetConfig() {
+            localStorage.setItem(LS_WIDGET_CONFIG, JSON.stringify(widgetConfig));
+        }
+
+        /**
+         * Renders widgets based on the current configuration (order and visibility).
+         */
+        function renderWidgets() {
+            const tempFragment = document.createDocumentFragment();
+            const widgetElements = {};
+            
+            // Collect existing widget elements
+            document.querySelectorAll('.widget-card').forEach(el => {
+                widgetElements[el.getAttribute('data-widget-id')] = el;
+            });
+            
+            // Apply order and visibility
+            widgetConfig.forEach(config => {
+                const el = widgetElements[config.id];
+                if (el) {
+                    el.style.display = config.visible ? 'block' : 'none';
+                    el.setAttribute('data-visible', config.visible);
+                    tempFragment.appendChild(el);
+                }
+            });
+
+            // Append structured/sorted widgets back to the container
+            widgetZone.innerHTML = '';
+            widgetZone.appendChild(tempFragment);
+            lucide.createIcons(); // Re-render icons after DOM manipulation
+        }
+        
+        /**
+         * Toggles the visibility of the entire widget column.
+         */
+        window.toggleWidgetColumn = function(isVisible) {
+            if (isVisible) {
+                widgetZone.classList.remove('hidden');
+                mainGridContainer.classList.add('widgets-visible');
+                widgetZone.setAttribute('data-is-active', 'true');
+            } else {
+                widgetZone.classList.add('hidden');
+                mainGridContainer.classList.remove('widgets-visible');
+                widgetZone.setAttribute('data-is-active', 'false');
+            }
+            localStorage.setItem(LS_WIDGET_BAR_VISIBLE, isVisible);
+        }
+
+        /**
+         * Hides an individual widget and updates config.
+         */
+        window.hideWidget = function(widgetId) {
+            // Use the custom confirmation modal
+            openConfirmModal(`¿Estás seguro de que quieres ocultar el widget de ${widgetConfig.find(w => w.id === widgetId)?.name || widgetId}?`, () => {
+                const config = widgetConfig.find(w => w.id === widgetId);
+                if (config) {
+                    config.visible = false;
+                    saveWidgetConfig();
+                    renderWidgets();
+                    renderWidgetManager(); // Update manager list
+                }
+            }, "Ocultar");
+        }
+        
+        /**
+         * Unhides an individual widget and updates config.
+         */
+        window.unhideWidget = function(widgetId) {
+            const config = widgetConfig.find(w => w.id === widgetId);
+            if (config) {
+                config.visible = true;
+                saveWidgetConfig();
+                // Re-render both the main widget area and the settings manager list
+                renderWidgets();
+                renderWidgetManager();
+            }
+        }
+        
+        /**
+         * Renders the list of hidden widgets in the Settings Panel for easy restoration.
+         */
+        function renderWidgetManager() {
+            const listContainer = document.getElementById('widget-manager-list');
+            const noHiddenMessage = document.getElementById('no-hidden-widgets');
+            listContainer.innerHTML = '';
+            
+            const hiddenWidgets = widgetConfig.filter(w => !w.visible);
+            
+            if (hiddenWidgets.length === 0) {
+                noHiddenMessage.classList.remove('hidden');
+                return;
+            }
+            noHiddenMessage.classList.add('hidden');
+
+            hiddenWidgets.forEach(widget => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 rounded-lg bg-app/10';
+                item.innerHTML = `
+                    <span class="text-app text-sm">${widget.name}</span>
+                    <button onclick="unhideWidget('${widget.id}')" 
+                            class="p-1 rounded-full text-white bg-primary hover:opacity-90 transition-opacity" 
+                            title="Hacer visible">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                `;
+                listContainer.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+
+        // --- Drag & Drop Logic for Widgets ---
+        let draggedWidgetElement = null;
+
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.matches('.widget-card') && e.target.closest('#widget-zone')) {
+                draggedWidgetElement = e.target;
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => e.target.classList.add('dragging'), 0); 
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+            if (draggedWidgetElement && e.target.closest('#widget-zone')) {
+                const targetWidgetItem = e.target.closest('.widget-card');
+
+                if (targetWidgetItem && targetWidgetItem !== draggedWidgetElement && targetWidgetItem.getAttribute('data-visible') === 'true') {
+                    const bounding = targetWidgetItem.getBoundingClientRect();
+                    const offset = bounding.y + (bounding.height / 2);
+
+                    if (e.clientY < offset) {
+                        widgetZone.insertBefore(draggedWidgetElement, targetWidgetItem);
+                    } else {
+                        widgetZone.insertBefore(draggedWidgetElement, targetWidgetItem.nextSibling);
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWidgetElement) {
+                draggedWidgetElement.classList.remove('dragging');
+                updateWidgetOrderFromDOM();
+                draggedWidgetElement = null;
+            }
+        });
+
+        /**
+         * Updates the global 'widgetConfig' array to match the visual order in the DOM.
+         */
+        function updateWidgetOrderFromDOM() {
+            const allWidgetElements = Array.from(widgetZone.children).filter(el => el.matches('.widget-card'));
+            
+            const newWidgetConfig = [];
+            
+            allWidgetElements.forEach(el => {
+                const widgetId = el.getAttribute('data-widget-id');
+                const existingConfig = widgetConfig.find(w => w.id === widgetId);
+                if (existingConfig) {
+                    // Maintain visibility status
+                    newWidgetConfig.push({
+                        id: widgetId,
+                        visible: existingConfig.visible,
+                        name: existingConfig.name 
+                    });
+                }
+            });
+            
+            widgetConfig = newWidgetConfig;
+            saveWidgetConfig();
+        }
+
+        // ----------------------------------------------------------------------
+        // --- CLOCK WIDGET (DIGITAL/ANALOG) ---
+        // ----------------------------------------------------------------------
+        
+        window.toggleClockMode = function() {
+            clockMode = clockMode === 'digital' ? 'analog' : 'digital';
+            localStorage.setItem(LS_WIDGET_MODE, clockMode);
+            clockModeIcon.setAttribute('data-lucide', clockMode === 'digital' ? 'clock-3' : 'clock');
+            lucide.createIcons();
+            updateClock();
+        }
+
+        function updateClock() {
+            const now = new Date();
+            if (clockMode === 'digital') {
+                renderDigitalClock(now);
+            } else {
+                renderAnalogClock(now);
+            }
+        }
+
+        /**
+         * Renders the digital clock in HH:MM format (removed seconds).
+         */
+        function renderDigitalClock(now) {
+            // Muestra solo horas y minutos (HH:MM)
+            const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+            clockDisplay.innerHTML = `<p class="text-app text-7xl font-extrabold">${timeString}</p>`;
+        }
+        
+        function renderAnalogClock(now) {
+            const hour = now.getHours() % 12;
+            const minute = now.getMinutes();
+            const second = now.getSeconds();
+            
+            const secondDeg = second * 6;
+            const minuteDeg = minute * 6 + second * 0.1;
+            const hourDeg = hour * 30 + minute * 0.5;
+
+            const svgContent = `
+                <svg viewBox="0 0 100 100" class="w-full h-full max-w-40 max-h-40">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgb(var(--color-text), 0.2)" stroke-width="2"/>
+                    <circle cx="50" cy="50" r="3" fill="rgb(var(--color-primary))"/>
+                    <line x1="50" y1="50" x2="50" y2="25" class="hand hour" stroke-linecap="round" style="transform: rotate(${hourDeg}deg)"/>
+                    <line x1="50" y1="50" x2="50" y2="15" class="hand minute" stroke-linecap="round" style="transform: rotate(${minuteDeg}deg)"/>
+                    <line x1="50" y1="50" x2="50" y2="10" class="hand second" stroke-linecap="round" style="transform: rotate(${secondDeg}deg)"/>
+                </svg>
+            `;
+            clockDisplay.innerHTML = svgContent;
+        }
+
+        // --- CALENDAR WIDGET ---
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        function renderCalendar(now) {
+            const dayOfWeek = dayNames[now.getDay()];
+            const dayOfMonth = now.getDate();
+            const monthName = monthNames[now.getMonth()];
+
+            document.getElementById('calendar-day-name').textContent = dayOfWeek;
+            document.getElementById('calendar-day-month').textContent = String(dayOfMonth).padStart(2, '0');
+            document.getElementById('calendar-month-name').textContent = monthName;
+        }
+        
+        // --- IMAGE WIDGET ---
+        window.handleImageUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Image = e.target.result;
+                localStorage.setItem(LS_CUSTOM_IMAGE, base64Image);
+                displayCustomImage(base64Image);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        window.removeCustomImage = function() {
+            localStorage.removeItem(LS_CUSTOM_IMAGE);
+            displayCustomImage(null);
+            document.getElementById('image-upload').value = ''; 
+        }
+
+        function loadCustomImage() {
+            const base64Image = localStorage.getItem(LS_CUSTOM_IMAGE);
+            displayCustomImage(base64Image);
+        }
+        
+        function displayCustomImage(base64Image) {
+            if (base64Image) {
+                customImageDisplay.src = base64Image;
+                customImageDisplay.classList.remove('hidden');
+                imageUploadLabel.classList.add('hidden');
+                imageRemoveBtn.classList.remove('hidden');
+            } else {
+                customImageDisplay.src = '';
+                customImageDisplay.classList.add('hidden');
+                imageUploadLabel.classList.remove('hidden');
+                imageRemoveBtn.classList.add('hidden');
+            }
+        }
+        
+        function initWidgets() {
+            loadWidgetConfig();
+            
+            clockModeIcon.setAttribute('data-lucide', clockMode === 'digital' ? 'clock-3' : 'clock');
+            if (clockIntervalId) clearInterval(clockIntervalId);
+            updateClock();
+            clockIntervalId = setInterval(updateClock, 1000);
+
+            renderCalendar(new Date());
+            loadCustomImage();
+
+            // NEW: Render the manager list in settings
+            renderWidgetManager(); 
+        }
+
+
+        // ----------------------------------------------------------------------
+        // --- TASK MANAGER (IN-MEMORY) LOGIC -----------------------------------
+        // ----------------------------------------------------------------------
+
+        function sortTasks() {
+            tasks.sort((a, b) => {
+                if (a.completed === b.completed) {
+                    return (b.createdAt || b.id) - (a.createdAt || a.id); 
+                }
+                return a.completed ? 1 : -1;
+            });
+        }
+        
+        function handleTaskSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('task-name').value;
+            const description = document.getElementById('task-description').value;
+            const deadline = document.getElementById('task-deadline').value;
+            const idToEdit = document.getElementById('task-id-to-edit').value;
+            if (!name) return;
+
+            if (idToEdit) {
+                const taskIndex = tasks.findIndex(t => t.id === idToEdit);
+                if (taskIndex !== -1) {
+                    tasks[taskIndex].name = name;
+                    tasks[taskIndex].description = description;
+                    tasks[taskIndex].deadline = deadline || null;
+                }
+            } else {
+                const newTask = {
+                    id: crypto.randomUUID(), 
+                    name,
+                    description,
+                    deadline: deadline || null,
+                    completed: false,
+                    createdAt: Date.now(),
+                };
+                tasks.push(newTask);
+                sortTasks();
+            }
+            renderTasks();
+            closeTaskModal();
+        }
+        document.getElementById('task-form').addEventListener('submit', handleTaskSubmit);
+
+        window.toggleTaskCompleted = function(taskId, currentState) {
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                const newState = !currentState;
+                tasks[taskIndex].completed = newState;
+                tasks[taskIndex].completedAt = newState ? Date.now() : null;
+                sortTasks();
+                renderTasks();
+            }
+        }
+
+        window.deleteTask = function(taskId) {
+            openConfirmModal("¿Estás seguro de que quieres eliminar esta tarea?", () => {
+                tasks = tasks.filter(t => t.id !== taskId);
+                renderTasks();
+            }, "Eliminar");
+        }
+        
+        window.editTask = function(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('task-modal-title').textContent = 'Editar Tarea';
+            document.getElementById('task-id-to-edit').value = task.id;
+            document.getElementById('task-name').value = task.name;
+            document.getElementById('task-description').value = task.description;
+            document.getElementById('task-deadline').value = task.deadline || '';
+            document.getElementById('task-submit-btn').textContent = 'Guardar Cambios';
+
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function renderTasks() {
+            const tasksList = document.getElementById('tasks-list');
+            const noTasksMessage = document.getElementById('no-tasks-message');
+            tasksList.innerHTML = ''; 
+
+            if (tasks.length === 0) {
+                noTasksMessage.classList.remove('hidden');
+                return;
+            }
+            noTasksMessage.classList.add('hidden');
+            
+            tasks.forEach(task => {
+                const isCompleted = task.completed;
+                const taskItem = document.createElement('div');
+                
+                const isDraggable = !isCompleted; 
+                taskItem.setAttribute('data-task-id', task.id);
+                if (isDraggable) {
+                    taskItem.setAttribute('draggable', 'true');
+                }
+
+                const bgClass = isCompleted ? 'bg-task-completed' : 'bg-task';
+                const cursorClass = isDraggable ? 'cursor-grab' : 'cursor-default';
+
+                taskItem.className = `p-4 rounded-xl ${bgClass} transition-all shadow-md ${isCompleted ? 'opacity-80' : 'hover:opacity-95'} ${cursorClass}`;
+                
+                let deadlineHtml = '';
+                if (task.deadline) {
+                    try {
+                        const deadlineDate = new Date(task.deadline);
+                        const formatter = new Intl.DateTimeFormat('es-ES', { 
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                        });
+                        const isImminent = !isCompleted && (deadlineDate.getTime() - Date.now() < (24 * 60 * 60 * 1000));
+                        const deadlineClass = isImminent ? 'text-red-500 font-bold' : 'text-primary';
+
+                        deadlineHtml = `<span class="text-xs ${deadlineClass} font-medium ml-2 whitespace-nowrap">${formatter.format(deadlineDate)}</span>`;
+                    } catch (e) {
+                        console.error("Invalid deadline format:", task.deadline);
+                    }
+                }
+
+                const titleClass = isCompleted ? 'line-through opacity-80' : 'font-semibold';
+                const descClass = isCompleted ? 'line-through text-sm opacity-70' : 'text-sm opacity-90';
+
+                const iconName = isCompleted ? 'check-circle' : 'circle';
+                const iconColorClass = isCompleted ? 'text-primary' : 'text-app/50 hover:text-primary/80';
+                const completionHandler = `window.toggleTaskCompleted('${task.id}', ${isCompleted})`;
+
+
+                taskItem.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center flex-1 min-w-0">
+                            <div onclick="${completionHandler}" 
+                                 class="task-toggle w-6 h-6 mr-3 ${iconColorClass} flex-shrink-0" 
+                                 title="${isCompleted ? 'Marcar como pendiente' : 'Marcar como completada'}">
+                                <i data-lucide="${iconName}" class="w-6 h-6"></i>
+                            </div>
+
+                            <div class="flex-1 min-w-0 pt-0.5">
+                                <div class="${titleClass} text-app break-words cursor-default">
+                                    ${task.name}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center flex-shrink-0">
+                            ${deadlineHtml}
+                            <button onclick="editTask('${task.id}')" class="text-app/50 hover:text-blue-500 ml-3 transition-colors p-1" title="Editar tarea">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteTask('${task.id}')" class="text-app/50 hover:text-red-500 ml-3 transition-colors p-1" title="Eliminar tarea">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${task.description ? `<p class="mt-1 ml-8 ${descClass} text-app break-words">${task.description}</p>` : ''}
+                `;
+                tasksList.appendChild(taskItem);
+            });
+            lucide.createIcons();
+        }
+
+        window.openTaskModal = function() {
+            document.getElementById('task-modal-title').textContent = 'Añadir Nueva Tarea';
+            document.getElementById('task-id-to-edit').value = '';
+            document.getElementById('task-name').value = '';
+            document.getElementById('task-description').value = '';
+            document.getElementById('task-deadline').value = '';
+            document.getElementById('task-submit-btn').textContent = 'Guardar Tarea';
+
+            document.getElementById('task-modal').classList.remove('hidden');
+            document.getElementById('task-form').reset();
+        }
+
+        window.closeTaskModal = function() {
+            document.getElementById('task-modal').classList.add('hidden');
+        }
+
+        function openConfirmModal(message, onConfirm, okText = "Aceptar") {
+            const modal = document.getElementById('confirm-modal');
+            const msgEl = document.getElementById('confirm-message');
+            const okBtn = document.getElementById('confirm-ok');
+            const cancelBtn = document.getElementById('confirm-cancel');
+
+            msgEl.textContent = message;
+            okBtn.textContent = okText; 
+            modal.classList.remove('hidden');
+
+            const handleOk = () => {
+                modal.classList.add('hidden');
+                onConfirm();
+                removeListeners();
+            };
+
+            const handleCancel = () => {
+                modal.classList.add('hidden');
+                removeListeners();
+            };
+
+            const removeListeners = () => {
+                okBtn.removeEventListener('click', handleOk);
+                cancelBtn.removeEventListener('click', handleCancel);
+            };
+
+            // Use .cloneNode(true) to ensure clean listeners every time
+            const okBtnNew = okBtn.cloneNode(true);
+            const cancelBtnNew = cancelBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(okBtnNew, okBtn);
+            cancelBtn.parentNode.replaceChild(cancelBtnNew, cancelBtn);
+
+            okBtnNew.addEventListener('click', handleOk);
+            cancelBtnNew.addEventListener('click', handleCancel);
+        }
+
+        // --- DRAG & DROP LOGIC (for pending tasks) ---
+        let draggedTaskElement = null;
+
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.matches('[draggable="true"]') && e.target.closest('#tasks-list')) {
+                draggedTaskElement = e.target;
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => e.target.classList.add('opacity-40'), 0); 
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault(); 
+            if (draggedTaskElement && e.target.closest('#tasks-list')) {
+                const targetTaskItem = e.target.closest('[data-task-id]');
+
+                if (targetTaskItem && targetTaskItem !== draggedTaskElement && targetTaskItem.hasAttribute('draggable')) {
+                    const tasksList = document.getElementById('tasks-list');
+                    const bounding = targetTaskItem.getBoundingClientRect();
+                    const offset = bounding.y + (bounding.height / 2);
+
+                    if (e.clientY < offset) {
+                        tasksList.insertBefore(draggedTaskElement, targetTaskItem);
+                    } else {
+                        tasksList.insertBefore(draggedTaskElement, targetTaskItem.nextSibling);
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedTaskElement) {
+                draggedTaskElement.classList.remove('opacity-40');
+                updateTasksOrderFromDOM();
+                draggedTaskElement = null;
+            }
+        });
+
+        function updateTasksOrderFromDOM() {
+            const tasksList = document.getElementById('tasks-list');
+            const allTaskElements = Array.from(tasksList.children).filter(el => el.getAttribute('data-task-id'));
+            
+            const finalTaskOrder = [];
+            
+            allTaskElements.forEach(el => {
+                const taskId = el.getAttribute('data-task-id');
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    finalTaskOrder.push(task);
+                }
+            });
+            
+            tasks = finalTaskOrder;
+        }
+
+
+        // ----------------------------------------------------------------------
+        // --- POMODORO TIMER LOGIC ---
+        // ----------------------------------------------------------------------
+
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        
+        function updateTimerDisplayAndProgress() {
+            const timerDisplay = document.getElementById('timer-display');
+            const progressCircle = document.getElementById('timer-progress-circle');
+            
+            timerDisplay.textContent = formatTime(remainingTime);
+            document.title = `${formatTime(remainingTime)} - Pomodoro Timer (${getModeTitle(currentMode)})`;
+
+            const progress = (totalTimeForMode - remainingTime) / totalTimeForMode;
+            const offset = CIRCUMFERENCE * (1 - progress); 
+            
+            progressCircle.style.strokeDashoffset = offset;
+        }
+
+        function updateTimer() {
+            if (remainingTime <= 0) {
+                clearInterval(intervalId);
+                isRunning = false;
+                remainingTime = 0;
+                updateTimerDisplayAndProgress();
+                document.getElementById('start-pause-btn').textContent = 'Comenzar';
+                document.getElementById('reset-btn').classList.add('hidden');
+                
+                playAlarm();
+
+                document.getElementById('timer-message').textContent = '¡Tiempo terminado! Tómate un descanso.';
+                
+                setTimeout(() => {
+                    if (currentMode === 'study') {
+                        setModeTimer('short'); 
+                    } else {
+                        setModeTimer('study'); 
+                    }
+                }, 3000); 
+                
+                return;
+            }
+
+            remainingTime--;
+            updateTimerDisplayAndProgress();
+        }
+
+        window.startPauseTimer = function() {
+            if (remainingTime <= 0) {
+                resetTimer();
+            }
+
+            Tone.start();
+
+            const startPauseBtn = document.getElementById('start-pause-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const timerMessage = document.getElementById('timer-message');
+
+            if (isRunning) {
+                clearInterval(intervalId);
+                isRunning = false;
+                startPauseBtn.textContent = 'Reanudar';
+                timerMessage.textContent = 'Temporizador en pausa...';
+            } else {
+                intervalId = setInterval(updateTimer, 1000);
+                isRunning = true;
+                startPauseBtn.textContent = 'Pausar';
+                resetBtn.classList.remove('hidden');
+                timerMessage.textContent = getModeMessage(currentMode, true);
+            }
+        }
+
+        window.resetTimer = function() {
+            clearInterval(intervalId);
+            isRunning = false;
+
+            let initialTime;
+            switch (currentMode) {
+                case 'short': initialTime = SHORT_BREAK_TIME_S; break;
+                case 'long': initialTime = LONG_BREAK_TIME_S; break;
+                case 'study': default: initialTime = studyTimeCustom; break;
+            }
+            
+            remainingTime = initialTime;
+            totalTimeForMode = initialTime;
+            
+            updateTimerDisplayAndProgress();
+            
+            document.getElementById('start-pause-btn').textContent = 'Comenzar';
+            document.getElementById('reset-btn').classList.add('hidden');
+            document.getElementById('timer-message').textContent = getModeMessage(currentMode, false);
+            document.title = `Pomodoro Timer - ${getModeTitle(currentMode)}`;
+        }
+
+        function playAlarm() {
+            try {
+                synth.triggerAttackRelease(['C4', 'E4', 'G4'], '0.5'); 
+            } catch (error) {
+                console.error("Error playing sound:", error);
+            }
+        }
+
+        window.setModeTimer = function(mode) {
+            currentMode = mode;
+            resetTimer(); 
+
+            let btnId;
+            switch (mode) {
+                case 'short': btnId = 'short-break-mode'; break;
+                case 'long': btnId = 'long-break-mode'; break;
+                case 'study': default: btnId = 'study-mode'; break;
+            }
+            
+            // Lógica para aplicar la clase 'active' que tiene el estilo de tema
+            document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(btnId).classList.add('active');
+        }
+
+        function getModeTitle(mode) {
+            switch(mode) {
+                case 'study': return 'Estudio';
+                case 'short': return 'Descanso Corto';
+                case 'long': return 'Descanso Largo';
+                default: return 'Temporizador';
+            }
+        }
+
+        function getModeMessage(mode, isCounting) {
+            switch(mode) {
+                case 'study': return isCounting ? '¡A concentrarse!' : 'Listo para una sesión de estudio.';
+                case 'short': return isCounting ? 'Descanso Corto: ¡Estírate!' : '5 minutos de descanso corto.';
+                case 'long': return isCounting ? 'Descanso Largo: ¡Desconecta!' : '15 minutos de descanso largo.';
+                default: return 'Selecciona un modo para comenzar.';
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // --- THEME / SETTINGS LOGIC -------------------------------------------
+        // ----------------------------------------------------------------------
+
+        window.setTheme = function(themeName) {
+            document.body.setAttribute('data-theme', themeName);
+            updateThemeButtonActiveState(themeName);
+            renderTasks();
+            updateClock();
+        }
+
+        function updateThemeButtonActiveState(activeTheme) {
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                const themeMatch = btn.getAttribute('onclick').match(/'(.*)'/);
+                const theme = themeMatch ? themeMatch[1] : null;
+
+                btn.classList.remove('border-4', 'border-current'); 
+                
+                if (theme === activeTheme) {
+                    btn.classList.add('border-4', 'border-current');
+                }
+            });
+        }
+
+        window.setMode = function(modeName) {
+            document.body.setAttribute('data-mode', modeName);
+            
+            const currentTheme = document.body.getAttribute('data-theme');
+            updateThemeButtonActiveState(currentTheme); 
+            
+            document.getElementById('light-mode-btn').classList.remove('bg-primary/20', 'shadow-md');
+            document.getElementById('dark-mode-btn').classList.remove('bg-primary/20', 'shadow-md');
+
+            const activeBtn = document.getElementById(`${modeName}-mode-btn`);
+            if (activeBtn) {
+                 activeBtn.classList.add('bg-primary/20', 'shadow-md');
+            }
+            renderTasks();
+            updateClock();
+        }
+
+        window.toggleSettings = function() {
+            document.getElementById('settings-panel').classList.toggle('open');
+        }
+
+        window.updateStudyTime = function(minutes) {
+            const timeInMinutes = parseInt(minutes, 10);
+            
+            if (isNaN(timeInMinutes) || timeInMinutes < 1 || timeInMinutes > 60) {
+                 document.getElementById('study-time-input').value = Math.floor(studyTimeCustom / 60);
+                 return;
+            }
+
+            studyTimeCustom = timeInMinutes * 60;
+            
+            if (currentMode === 'study' && !isRunning) {
+                resetTimer();
+            }
+        }
+
+
+        // ----------------------------------------------------------------------
+        // --- INITIALIZATION ---------------------------------------------------
+        // ----------------------------------------------------------------------
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialize Lucide icons
+            lucide.createIcons();
+            
+            // 2. Initial Task Render 
+            renderTasks(); 
+
+            // 3. Apply initial UI updates
+            const initialTheme = 'red'; 
+            const initialMode = 'light'; 
+            
+            setMode(initialMode); 
+            setTheme(initialTheme);  
+            setModeTimer('study'); 
+
+            const initialInput = document.getElementById('study-time-input').value;
+            updateStudyTime(initialInput);
+
+            // 4. Initialize Widgets (Loads config, sets order/visibility, and populates manager list)
+            initWidgets();
+            
+            // 5. Load and apply Widget Bar Visibility
+            const isBarVisible = localStorage.getItem(LS_WIDGET_BAR_VISIBLE) === 'true';
+            document.getElementById('toggle-widget-bar').checked = isBarVisible;
+            toggleWidgetColumn(isBarVisible);
+        });
+
+    </script>
+</body>
+</html>
