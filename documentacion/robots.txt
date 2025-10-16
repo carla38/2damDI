@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://carla38.github.io/2damDI/sitemap.xml
