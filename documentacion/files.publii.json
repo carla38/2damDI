@@ -92,17 +92,17 @@
     {
         "path": "feed.json",
         "type": "file",
-        "md5": "4ee9cccee71af3d82da999b46cc051bc"
+        "md5": "7fdb60af255a5fcec9de539dffde9d38"
     },
     {
         "path": "feed.xml",
         "type": "file",
-        "md5": "914c9371e8065d677c24b74e19246242"
+        "md5": "7bee36e5cd75cd6d351e7ea181714aab"
     },
     {
         "path": "index.html",
         "type": "file",
-        "md5": "1f0bc91c3b8eb5334582a03acf63f6db"
+        "md5": "4be1b3788212be0c999a47672de3589d"
     },
     {
         "path": "media",
@@ -540,6 +540,406 @@
         "md5": "0afdbae5fbed71db41506cbc3e468b33"
     },
     {
+        "path": "media/posts/2",
+        "type": "directory",
+        "md5": false
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-01-142019.png",
+        "type": "file",
+        "md5": "d48b674811990a27db4edb6eee62e0f5"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-01-143806.png",
+        "type": "file",
+        "md5": "9d590eb84d51c6096c740a5b7420d28d"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-123524.png",
+        "type": "file",
+        "md5": "317343d054a04f63138efcc0d91627cc"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-125013-4.png",
+        "type": "file",
+        "md5": "6120cfd33ab67c3d6252f56c140d5841"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-125019-3.png",
+        "type": "file",
+        "md5": "b3793d85685a8d23e389bd1444379187"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-125019.png",
+        "type": "file",
+        "md5": "b3793d85685a8d23e389bd1444379187"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-125027-2.png",
+        "type": "file",
+        "md5": "b239da34e2e2e6520b73487f8f7326fc"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-131714-3.png",
+        "type": "file",
+        "md5": "67a279e8bdfda81a71d754b8e7ebab6c"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-141410-2.png",
+        "type": "file",
+        "md5": "31609364f98256ddd942dc870f1bd735"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-162032-2.png",
+        "type": "file",
+        "md5": "e5617c0b07390693474d4b1a5541d611"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-163603-2.png",
+        "type": "file",
+        "md5": "9bcc8f0f85bbd6613364fad7d6df0ca9"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-02-174645.png",
+        "type": "file",
+        "md5": "e038a98a58e9f4e05bfc31aa4cd8b7c2"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-03-113421.png",
+        "type": "file",
+        "md5": "8bf26591350186a1adb29aba1f886961"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-03-113430.png",
+        "type": "file",
+        "md5": "d652ec48a7b8316f30c4ec38fd4ec7a5"
+    },
+    {
+        "path": "/media/posts/2/Captura-de-pantalla-2025-11-03-113502.png",
+        "type": "file",
+        "md5": "f3831079bb802317746348c029653bcd"
+    },
+    {
+        "path": "media/posts/2/responsive",
+        "type": "directory",
+        "md5": false
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-lg.png",
+        "type": "file",
+        "md5": "5692d8f4ab73f04123a0a73d4102a866"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-md.png",
+        "type": "file",
+        "md5": "3141cb5906b5242164cd37a64c79f055"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-sm.png",
+        "type": "file",
+        "md5": "603f02687ab04486c62622c1ca60eace"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-xs.png",
+        "type": "file",
+        "md5": "966dfe17c02f222a0ed93b2db5dbe74a"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-lg.png",
+        "type": "file",
+        "md5": "e92b3406802ffe0043844ee5af334a53"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-md.png",
+        "type": "file",
+        "md5": "652afc17658ea10ccca41e4fa8fa3012"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-sm.png",
+        "type": "file",
+        "md5": "2351a274a4ec3e2c3a7ea57bf43d651d"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-xs.png",
+        "type": "file",
+        "md5": "2d0dec4dc7c0d9ae47b23df59c144169"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-lg.png",
+        "type": "file",
+        "md5": "bc5522ee780fe19e5a789b9bb6c2eaea"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-md.png",
+        "type": "file",
+        "md5": "bc5522ee780fe19e5a789b9bb6c2eaea"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-sm.png",
+        "type": "file",
+        "md5": "2bc762c10ce6bdd5917ec23bf59c867c"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-xs.png",
+        "type": "file",
+        "md5": "878ed529e96d32aadbd89c7c77c85b92"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-lg.png",
+        "type": "file",
+        "md5": "721c81187bbc194b3f5019c7f7bf0367"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-md.png",
+        "type": "file",
+        "md5": "9d4e39e85c94ba6ec988c876f8359802"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-sm.png",
+        "type": "file",
+        "md5": "73f0666b393af75433c371edeff4780b"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-xs.png",
+        "type": "file",
+        "md5": "981d51b1db47891e458b42fb60474d96"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-2xl.png",
+        "type": "file",
+        "md5": "9dabcda3be271f2110c5188980f64619"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-lg.png",
+        "type": "file",
+        "md5": "addd4f1d7247b28ad2369ffbec31ecfe"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-md.png",
+        "type": "file",
+        "md5": "2588f25865b7e856aea83ea07ee04b57"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-sm.png",
+        "type": "file",
+        "md5": "3eac4f5345941ee8418864891e93cf69"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-xs.png",
+        "type": "file",
+        "md5": "a5476ad75f3fb7ab2b9c66adcd346eef"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-lg.png",
+        "type": "file",
+        "md5": "addd4f1d7247b28ad2369ffbec31ecfe"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-md.png",
+        "type": "file",
+        "md5": "2588f25865b7e856aea83ea07ee04b57"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-sm.png",
+        "type": "file",
+        "md5": "3eac4f5345941ee8418864891e93cf69"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-sm2.png",
+        "type": "file",
+        "md5": "14a16f09fe6e70f39a8be93e12ef8e74"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-xl.png",
+        "type": "file",
+        "md5": "b9f75e0ca53f93f53a19631711545d82"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-xs.png",
+        "type": "file",
+        "md5": "a5476ad75f3fb7ab2b9c66adcd346eef"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-lg.png",
+        "type": "file",
+        "md5": "95a3bf388a1ebaaa990d49c0393b9f38"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-md.png",
+        "type": "file",
+        "md5": "95a3bf388a1ebaaa990d49c0393b9f38"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-sm.png",
+        "type": "file",
+        "md5": "95a3bf388a1ebaaa990d49c0393b9f38"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-xs.png",
+        "type": "file",
+        "md5": "be2cb62f913fe7c50c8ad0daa877734c"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-lg.png",
+        "type": "file",
+        "md5": "ab648cb7d8e2e5706102ae11bfbc0ac3"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-md.png",
+        "type": "file",
+        "md5": "ab648cb7d8e2e5706102ae11bfbc0ac3"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-sm.png",
+        "type": "file",
+        "md5": "18b0bc7405be6c3ec0a6e639171060f2"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-xs.png",
+        "type": "file",
+        "md5": "de9b9168d0ea4950caecf86f662ef76a"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-lg.png",
+        "type": "file",
+        "md5": "e3bb5e9902072838e27b0c99c40c1910"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-md.png",
+        "type": "file",
+        "md5": "c18fcb7dc5837c27018de6b8aa1e8309"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-sm.png",
+        "type": "file",
+        "md5": "d21162e867b2f04e0566896eb150aaa7"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-xs.png",
+        "type": "file",
+        "md5": "f552b1a0f3e1323a97d386f6ec6302a7"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-lg.png",
+        "type": "file",
+        "md5": "cab9d47e1f4fecd65ca08902f3135901"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-md.png",
+        "type": "file",
+        "md5": "cab9d47e1f4fecd65ca08902f3135901"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-sm.png",
+        "type": "file",
+        "md5": "a21502d05c39927faf5026e623c29f4e"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-xs.png",
+        "type": "file",
+        "md5": "c4f6ef1a5acbc417ed6295265458f61e"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-lg.png",
+        "type": "file",
+        "md5": "66f24e70ec79a46e65db4a1d259c6b60"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-md.png",
+        "type": "file",
+        "md5": "66f24e70ec79a46e65db4a1d259c6b60"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-sm.png",
+        "type": "file",
+        "md5": "66f24e70ec79a46e65db4a1d259c6b60"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-xs.png",
+        "type": "file",
+        "md5": "66f24e70ec79a46e65db4a1d259c6b60"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-lg.png",
+        "type": "file",
+        "md5": "24224d2b01e5e9b5df400a271613fb34"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-md.png",
+        "type": "file",
+        "md5": "24224d2b01e5e9b5df400a271613fb34"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-sm.png",
+        "type": "file",
+        "md5": "24224d2b01e5e9b5df400a271613fb34"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-xs.png",
+        "type": "file",
+        "md5": "2f15d68417d7c160b8fc0fe4b76f095d"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-lg.png",
+        "type": "file",
+        "md5": "9ee23b7c4810e7909d4cedfab2ae5f84"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-md.png",
+        "type": "file",
+        "md5": "9ed30daa29c8dfa2008dbccfc80c5c42"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-sm.png",
+        "type": "file",
+        "md5": "3ed04a8f685fece61eb2f72e56cd1f73"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-xs.png",
+        "type": "file",
+        "md5": "64db37786db2d02c8fd1193a271f50a0"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-lg.png",
+        "type": "file",
+        "md5": "37a381aa240fa2bbc7ab92ee751e250b"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-md.png",
+        "type": "file",
+        "md5": "d38d5e21e5b1a23c58039fd21eb01589"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-sm.png",
+        "type": "file",
+        "md5": "6451629f2daf05a40befa30490617c47"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-xs.png",
+        "type": "file",
+        "md5": "a00af26f08d9752945c6901b9a8e795a"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-lg.png",
+        "type": "file",
+        "md5": "a8806e046413beefda1420189b849b7a"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-md.png",
+        "type": "file",
+        "md5": "2bc5fb8d9f7ff60b9c9066f414dfceaa"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-sm.png",
+        "type": "file",
+        "md5": "d3e38367f8647d88d0ca333bf83b8e2e"
+    },
+    {
+        "path": "/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-xs.png",
+        "type": "file",
+        "md5": "37c01e60e9859d9166adda655f822b39"
+    },
+    {
         "path": "media/website",
         "type": "directory",
         "md5": false
@@ -587,7 +987,12 @@
     {
         "path": "proceso-resolucion-app-pomodoro.html",
         "type": "file",
-        "md5": "82a545e03bff7db21328b948c762e070"
+        "md5": "cfbfd3b35d61f25fb1cb7376570dbc95"
+    },
+    {
+        "path": "proceso-resolucion-calendario-reproductor-multimedia.html",
+        "type": "file",
+        "md5": "6f92663fad72c4ee71ced3402fbe1ae4"
     },
     {
         "path": "robots.txt",
@@ -597,7 +1002,7 @@
     {
         "path": "sitemap.xml",
         "type": "file",
-        "md5": "558501f304064b433766698b142ef831"
+        "md5": "4eee15e3ca00cd40e402d89de9e14744"
     },
     {
         "path": "sitemap.xsl",

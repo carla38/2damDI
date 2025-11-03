@@ -3,12 +3,90 @@
     <title>DocumentacionDI</title>
     <link href="https://carla38.github.io/2damDI/documentacion/feed.xml" rel="self" />
     <link href="https://carla38.github.io/2damDI/documentacion" />
-    <updated>2025-10-16T14:29:32+02:00</updated>
+    <updated>2025-11-03T12:40:24+01:00</updated>
     <author>
         <name>Carla</name>
     </author>
     <id>https://carla38.github.io/2damDI/documentacion</id>
 
+    <entry>
+        <title>Proceso Resolución - Calendario Reproductor Multimedia</title>
+        <author>
+            <name>Carla</name>
+        </author>
+        <link href="https://carla38.github.io/2damDI/documentacion/proceso-resolucion-calendario-reproductor-multimedia.html"/>
+        <id>https://carla38.github.io/2damDI/documentacion/proceso-resolucion-calendario-reproductor-multimedia.html</id>
+        <media:content url="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125019.png" medium="image" />
+
+        <updated>2025-11-03T12:14:32+01:00</updated>
+            <summary>
+                <![CDATA[
+                        <img src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125019.png" alt="" />
+                    El objetivo de esta práctica ha sido crear una aplicación calendario en&hellip;
+                ]]>
+            </summary>
+        <content type="html">
+            <![CDATA[
+                    <p><img src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125019.png" class="type:primaryImage" alt="" /></p>
+                <p>El objetivo de esta práctica ha sido crear una aplicación calendario en la que se puedan subir archivos de audio a los distintos días. Para el desarrollo de este programa he utilizado la inteligencia artificial Gemini. En este proceso de resolución mostraré los prompts principales que he proporcionado para la creación de la aplicación y redactaré el proceso que he seguido.</p>
+<p>La primera orden ha servido para establecer el concepto básico de como debe ser la aplicación: un calendario con opciones de personalización y la posibilidad de añadir una portada a cada mes. Además de eso le he indicado desde un principio a la IA que actúe como un desarrollador web profesional, y le he aclarado que la aplicación debe ser responsive y estar adaptada a dispositivos móviles. Este es el primer resultado que me ha dado:</p>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-01-142019.png" alt="" width="877" height="189" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-142019-lg.png 1024w"></figure>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-01-143806.png" alt="" width="1840" height="879" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-01-143806-lg.png 1024w"></figure>
+<p> </p>
+<p>Antes de añadir más funcionalidades, le he solicitado algunos cambios visuales y respecto a la personalización, como añadir un apartado únicamente para los ajustes, agrandar y simplificar la portada del mes y que el tema y la portada sean únicos para cada mes. Tras ello, el calendario se veía así:</p>
+<table style="border-collapse: collapse; width: 100%;" border="0">
+<tbody>
+<tr>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-123524.png" alt="" width="520" height="377" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-123524-lg.png 1024w"></figure>
+</td>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125027-2.png" alt="" width="476" height="565" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125027-2-lg.png 1024w"></figure>
+</td>
+</tr>
+</tbody>
+</table>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125013-4.png" alt="" width="1843" height="865" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125013-4-lg.png 1024w"></figure>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-125019-3.png" alt="" width="1492" height="798" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-125019-3-lg.png 1024w"></figure>
+<p> </p>
+<p>Al acabar con estos ajustes visuales, le he pedido implementar una de las funcionalidades principales, la posibilidad de añadir contenido de texto y audios independientes a los días del mes. El resultado fue este:</p>
+<table style="border-collapse: collapse; width: 100%;" border="0">
+<tbody>
+<tr>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-131714-3.png" alt="" width="501" height="280" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-131714-3-lg.png 1024w"></figure>
+</td>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-141410-2.png" alt="" width="957" height="796" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-141410-2-lg.png 1024w"></figure>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p>Después le pedí añadir un icono que indique si en un día hay algo guardado, ya sea texto o audio. </p>
+<table style="border-collapse: collapse; width: 100%;" border="0">
+<tbody>
+<tr>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-162032-2.png" alt="" width="493" height="130" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-162032-2-lg.png 1024w"></figure>
+</td>
+<td style="width: 49.943%;">
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-163603-2.png" alt="" width="211" height="211" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-163603-2-lg.png 1024w"></figure>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p>Al acabar con todas estas funcionalidades estuve haciendo pruebas para asegurarme de que todo funcionaba correctamente. Sin embargo tuve varios errores respecto a los audios. Consultándolo con la IA resultó que se debían al tamaño de los audios, asi que se limitó a 5MB, pero la aplicación continuaba dando fallos.</p>
+<p>Al final el tamaño de archivos se tuvo que limitar a 500KB para evitar posibles errores. Para compensar, pedí que añadiera una segunda opción de grabar y subir audios en el momento, quedando el apartado de audios así:</p>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-02-174645.png" alt="" width="365" height="124" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-02-174645-lg.png 1024w"></figure>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-03-113421.png" alt="" width="898" height="217" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113421-lg.png 1024w"></figure>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-03-113430.png" alt="" width="883" height="263" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113430-lg.png 1024w"></figure>
+<figure class="post__image"><img loading="lazy"  src="https://carla38.github.io/2damDI/documentacion/media/posts/2/Captura-de-pantalla-2025-11-03-113502.png" alt="" width="900" height="138" sizes="(max-width: 1024px) 100vw, 1024px" srcset="https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-xs.png 300w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-sm.png 480w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-md.png 768w ,https://carla38.github.io/2damDI/documentacion/media/posts/2/responsive/Captura-de-pantalla-2025-11-03-113502-lg.png 1024w"></figure>
+<p> </p>
+            ]]>
+        </content>
+    </entry>
     <entry>
         <title>Proceso Resolución - App Pomodoro</title>
         <author>
