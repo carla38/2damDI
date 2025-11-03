@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Multimedia</title>
+    <!-- Incluyendo Tailwind CSS CDN para estilos rápidos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // Colores base para usar con JS/CSS variables
+                        'primary-accent': 'var(--primary-color, #4F46E5)',
+                        'primary-light-text': 'var(--primary-light, #A5B4FC)',
+                        // El fondo principal de la tarjeta ahora será dinámico
+                        'bg-card': 'var(--primary-light-card, #FFFFFF)', 
+                        'bg-main': 'var(--bg-main, #F9FAFB)',
+                        'text-default': 'var(--text-default, #1F2937)',
+                        'text-muted': 'var(--text-muted, #6B7280)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Variables CSS para el tema y el color de acento */
+        :root {
+            --primary-color: #4F46E5; /* Indigo por defecto (Acento principal) */
+            --primary-light: #A5B4FC; /* Tono claro del acento (Días de la semana, iconos) */
+            --primary-light-bg: #EEF2FF; /* Color de fondo muy claro (Hover, día actual) */
+            --primary-light-card: #FFFFFF; /* Fondo de la tarjeta (Blanco por defecto) */
+            --bg-main: #F9FAFB; /* Fondo de la aplicación/cuadros internos (Gris muy claro) */
+            --text-default: #1F2937;
+            --text-muted: #6B7280;
+        }
+
+        /* Tema Oscuro: Ajustamos los colores base de la aplicación */
+        .dark-theme {
+            --bg-main: #111827; /* Fondo principal de la aplicación */
+            --primary-light-card: #1F2937; /* Fondo de la tarjeta (Calendario principal y modal de detalles) */
+            --text-default: #F9FAFB;
+            --text-muted: #9CA3AF;
+            /* Ajustamos los tonos claros del acento en modo oscuro para buena legibilidad */
+            --primary-light-bg: #374151; /* Hover y Fondo del cuadro de audio */
+            --primary-light: #9CA3AF; /* Días de la semana en gris claro para contraste */
+        }
+
+        /* Aplicar el fondo dinámico a la tarjeta principal */
+        #app-container {
+            background-color: var(--primary-light-card);
+        }
+
+        /* Clase para aplicar el color de acento principal (Texto del mes, iconos) */
+        .text-accent {
+            color: var(--primary-color);
+        }
+        /* Clase para aplicar el color de acento suave (Días de la semana) */
+        .text-accent-light {
+             color: var(--primary-light);
+        }
+        
+        /* Modificamos el hover para que use el color suave del tema */
+        .day-cell:hover {
+            background-color: var(--primary-light-bg);
+            color: var(--primary-color); /* El texto del día se vuelve más oscuro/acento en hover */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilos generales y scrollbar customizado */
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-default);
+            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Adaptación de la cuadrícula del calendario a dispositivos móviles */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px; /* Espacio reducido en móvil */
+        }
+        .day-cell {
+            padding: 8px 0; 
+            font-size: 14px;
+            /* Modificado para usar flex y centrar verticalmente el número del día y el indicador */
+            display: flex; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            aspect-ratio: 1 / 1; /* Mantener celdas cuadradas */
+            border-radius: 8px;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            /* Asegura que el color de fondo de la celda sea el de la tarjeta o transparente */
+            background-color: transparent; 
+            position: relative; 
+            cursor: pointer; 
+            height: 100%; /* Asegurar que ocupe todo el espacio de la cuadrícula */
+        }
+        
+        /* Contenedor del número del día (para centrarlo) */
+        .day-number-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-top: 5px; /* Pequeño espacio superior para centrar mejor visualmente */
+        }
+
+
+        @media (min-width: 640px) {
+            .day-cell {
+                padding: 12px 0;
+                font-size: 16px;
+            }
+            .calendar-grid {
+                gap: 8px; /* Espacio normal en desktop */
+            }
+        }
+
+        /* Estilo para el día actual */
+        .current-day {
+            /* Borde definido por primary-color */
+            box-shadow: 0 0 0 3px var(--primary-color) inset;
+            font-weight: 700;
+            /* Fondo ligeramente coloreado para integrar */
+            background-color: var(--primary-light-bg); 
+            color: var(--primary-color); /* Texto del día actual en color de acento */
+        }
+        
+        /* --- ESTILO ACTUALIZADO: Indicador de Nota/Audio --- */
+        .has-data-indicator {
+            /* Posición central debajo del número */
+            width: 6px; 
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary-color); /* Usa el color de acento activo */
+            margin-top: 4px; /* Separación del número de día */
+        }
+
+        /* Ocultar el input de archivo por defecto */
+        #coverImageUpload {
+            display: none;
+        }
+
+        /* Aplicar el color de fondo suave a los botones de navegación y ajustes en hover */
+        #prevMonth:hover, #nextMonth:hover, #openSettingsBtn:hover {
+             background-color: var(--primary-light-bg);
+        }
+
+        /* Los iconos de navegación también usan el color de acento principal (el de ajustes se aplica en el HTML) */
+        #prevMonth, #nextMonth {
+            color: var(--primary-color);
+        }
+        
+        /* Aseguramos un hover visual para el área de la portada ahora que está vacía */
+        #imageCoverArea:hover {
+            opacity: 0.9;
+        }
+        
+        /* Estilo base del placeholder de imagen (claro) */
+        #imageCoverArea {
+            background-color: #F3F4F6; /* Gris 100 (Claro por defecto) */
+            /* Borde de puntos para definir la zona de subida en modo claro */
+            border: 3px dashed var(--text-muted); 
+            /* Centrar el contenido invisible para que el cursor apunte a algo */
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Fondo más claro para la Portada en modo oscuro */
+        .dark-theme #imageCoverArea {
+            /* Usamos un gris más claro (gray-700) para darle más contraste con el fondo de la app */
+            background-color: #374151; /* Gris 700 */
+            /* Aseguramos que el borde en modo oscuro sea visible */
+            border-color: var(--text-muted); 
+        }
+
+        /* Anula el borde y fuerza el fondo de la tarjeta cuando una imagen está cargada */
+        #imageCoverArea.has-cover-image {
+            background-color: var(--primary-light-card) !important; 
+            border: none !important; 
+        }
+
+
+        /* --- Estilos para la pantalla de Ajustes (Mejorados) --- */
+        #settingsModal {
+            /* Aseguramos el fondo base y la transición del modal */
+            transition: transform 0.3s ease-in-out, background-color 0.3s;
+        }
+
+        #closeSettingsBtn:hover {
+            color: var(--primary-color); /* Color de acento en el icono de cerrar */
+        }
+
+        /* Aplicar el color de anillo del acento principal */
+        .ring-primary-accent {
+            --tw-ring-color: var(--primary-color);
+        }
+        /* El offset ring usa el color de fondo de la tarjeta */
+        .ring-offset-bg-card {
+            --tw-ring-offset-color: var(--primary-light-card);
+        }
+        /* Mejorar el focus de los select/inputs */
+        .focus\:border-primary-accent:focus {
+            border-color: var(--primary-color);
+        }
+        .focus\:ring-primary-accent:focus {
+            --tw-ring-color: var(--primary-color);
+        }
+        
+        /* Estilo para el botón de color cuando no está activo: Sutil borde para definirlo */
+        .color-button {
+            border: 2px solid var(--text-muted); /* Borde sutil por defecto */
+            border-color: rgba(107, 114, 128, 0.3); /* Gris claro semi-transparente */
+            transition: transform 0.1s;
+        }
+        /* El color activo eliminará este borde al usar el anillo (ring) */
+        .ring-4 {
+            border: none !important; /* Elimina el borde base cuando el anillo está activo */
+        }
+        
+        /* Estilo customizado para la barra de progreso de audio */
+        #audioProgressBar {
+            height: 6px;
+            cursor: pointer;
+            border-radius: 9999px;
+            /* Usamos la variable de color de acento para la parte llena */
+            --tw-accent-color: var(--primary-color);
+        }
+        /* Webkit/Blink */
+        #audioProgressBar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px; 
+            height: 14px;
+            border-radius: 50%;
+            background: var(--tw-accent-color);
+            cursor: pointer;
+            margin-top: -4px; /* Align thumb vertically */
+            box-shadow: 0 0 0 3px var(--primary-light-card); /* White/Card ring */
+        }
+        /* Firefox */
+        #audioProgressBar::-moz-range-thumb {
+            width: 14px; 
+            height: 14px;
+            border-radius: 50%;
+            background: var(--tw-accent-color);
+            cursor: pointer;
+            border: none;
+        }
+        /* Track (fondo de la barra) */
+        #audioProgressBar::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 9999px;
+            background: var(--primary-light-bg);
+        }
+        #audioProgressBar::-moz-range-track {
+            height: 6px;
+            border-radius: 9999px;
+            background: var(--primary-light-bg);
+        }
+        
+        /* --- Ajuste específico para el modal de detalles en modo claro --- */
+        /* Aseguramos que el textarea tenga un fondo blanco puro en modo CLARO */
+        #dayNotesTextarea {
+            background-color: #FFFFFF; /* White para máxima legibilidad en Light Mode */
+            color: var(--text-default); /* Texto oscuro */
+        }
+
+        /* En modo oscuro, se aplica el dark:bg-gray-700 */
+        .dark-theme #dayNotesTextarea {
+            background-color: #374151; /* Gris oscuro para modo oscuro */
+        }
+        
+        /* Aseguramos que el contenedor de audio use el fondo de aplicación (BG-MAIN) */
+        #audioSectionContainer {
+            background-color: var(--bg-main);
+        }
+
+    </style>
+</head>
+<body class="p-4 sm:p-8 transition-colors duration-300">
+    
+    <!-- Botón de Abrir Ajustes -->
+    <button id="openSettingsBtn" class="fixed top-4 left-4 sm:top-8 sm:left-8 p-2 rounded-full transition z-30" title="Abrir Ajustes Visuales">
+        <!-- Icono de Rueda de Configuración (Usa color de acento) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.22 2.766-.607z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    </button>
+    
+    <!-- Mini Toast Message Box (Reemplaza alert()) -->
+    <div id="modalToast" class="fixed top-0 left-1/2 -translate-x-1/2 p-3 mt-4 bg-red-600 text-white rounded-lg shadow-xl z-[60] opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+
+    <!-- Área de Personalización (Modal/Drawer) -->
+    <!-- Z-index 50 para estar por encima del calendario, pero debajo del Toast (60) -->
+    <div id="settingsModal" class="fixed inset-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out dark:bg-black/50 overflow-y-auto">
+        <div class="p-6 sm:p-8 w-full max-w-xs md:max-w-sm h-full border-r border-gray-200 dark:border-gray-700 bg-bg-main dark:bg-gray-900 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <!-- Título Fijo en Blanco para que se vea bien sobre cualquier fondo -->
+                <h2 class="text-2xl font-extrabold text-white">Ajustes</h2> 
+                <button id="closeSettingsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                    <!-- Icono de X -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Contenedor Principal de Opciones Estilizado -->
+            <div class="p-5 border rounded-xl border-gray-200 dark:border-gray-700 bg-bg-card shadow-xl">
+                
+                <!-- Selector de Tema (Apariencia) -->
+                <div class="mb-5 pb-5 border-b border-gray-100 dark:border-gray-700">
+                    <label class="block text-base font-semibold mb-3 text-text-default">Apariencia</label>
+                    <select id="themeToggle" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-bg-card text-text-default focus:border-primary-accent focus:ring-2 focus:ring-primary-accent transition shadow-inner">
+                        <option value="light">☀️ Claro</option>
+                        <option value="dark">🌙 Oscuro</option>
+                    </select>
+                </div>
+
+                <!-- Selector de Color de Acento (Sin Etiqueta) -->
+                <div>
+                    <!-- Etiqueta eliminada -->
+                    <div class="flex flex-wrap gap-4 justify-center">
+                        <!-- Añadida la clase color-button para un borde sutil -->
+                        <button data-color="#4F46E5" class="w-10 h-10 rounded-full bg-indigo-600 color-button transition hover:scale-105" title="Índigo"></button>
+                        <button data-color="#EF4444" class="w-10 h-10 rounded-full bg-red-500 color-button transition hover:scale-105" title="Rojo"></button>
+                        <button data-color="#10B981" class="w-10 h-10 rounded-full bg-emerald-500 color-button transition hover:scale-105" title="Esmeralda"></button>
+                        <button data-color="#F59E0B" class="w-10 h-10 rounded-full bg-amber-500 color-button transition hover:scale-105" title="Ámbar"></button>
+                        <button data-color="#8B5CF6" class="w-10 h-10 rounded-full bg-violet-500 color-button transition hover:scale-105" title="Violeta"></button>
+                        <button data-color="#06B6D4" class="w-10 h-10 rounded-full bg-cyan-500 color-button transition hover:scale-105" title="Cian"></button>
+                        <button data-color="#D946EF" class="w-10 h-10 rounded-full bg-fuchsia-500 color-button transition hover:scale-105" title="Fucsia"></button>
+                        <button data-color="#6B7280" class="w-10 h-10 rounded-full bg-gray-500 color-button transition hover:scale-105" title="Gris"></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botón de Reinicio con estilo de advertencia, ahora solo elimina la portada -->
+            <button id="resetSettingsBtn" class="mt-6 w-full text-center text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                Eliminar Imagen de Portada del Mes
+            </button>
+        </div>
+    </div>
+    <!-- Fin de Área de Personalización (Modal/Drawer) -->
+
+    <!-- Mini Toast Message Box (Reemplaza alert()) está arriba, fuera de settingsModal -->
+
+    <!-- El fondo de este contenedor ahora es dinámico (var(--primary-light-card)) -->
+    <div id="app-container" class="max-w-6xl mx-auto shadow-2xl rounded-xl overflow-hidden transition-colors duration-300">
+
+        <!-- Área de Portada (Header) -->
+        <header class="p-6 md:p-8 border-b border-gray-200 dark:border-gray-700 relative">
+            
+            <div class="flex">
+                
+                <!-- Sección de Portada del Mes -->
+                <div class="w-full">
+                    <!-- El estilo de borde y fondo base se gestiona ahora en CSS -->
+                    <div id="imageCoverArea" class="w-full h-80 sm:h-[32rem] lg:h-[40rem] rounded-xl flex items-center justify-center cursor-pointer overflow-hidden relative group transition-all duration-300"
+                         title="Haz clic para subir una imagen de portada">
+                        <input type="file" id="coverImageUpload" accept="image/*">
+                        <!-- El onerror se gestiona ahora en JS después de la carga para evitar falsos positivos por cambios de tema -->
+                        <img id="uploadedImage" src="" alt="Portada del Mes" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 opacity-0">
+                        
+                        <!-- El placeholder visual ha sido eliminado, la zona sigue siendo clickable -->
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal del Calendario -->
+        <main class="p-6 md:p-8">
+
+            <!-- Navegación del Mes -->
+            <div class="flex justify-between items-center mb-6">
+                <button id="prevMonth" class="p-2 rounded-full transition" title="Mes Anterior">
+                    <!-- Icono (Usa color de acento) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 id="currentMonthYear" class="text-2xl sm:text-3xl font-extrabold text-accent tracking-wider capitalize"></h2>
+                <button id="nextMonth" class="p-2 rounded-full transition" title="Mes Siguiente">
+                    <!-- Icono (Usa color de acento) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Días de la Semana (Lunes a Domingo) -->
+            <div id="weekDays" class="calendar-grid font-medium mb-2 text-sm sm:text-base">
+                <!-- Se llenará con JS y usará text-accent-light -->
+            </div>
+
+            <!-- Cuadrícula del Calendario -->
+            <div id="calendarGrid" class="calendar-grid">
+                <!-- Se llenará con JS -->
+            </div>
+
+        </main>
+    </div>
+    
+    <!-- Day Details Modal (Z-index 40 para estar debajo de Ajustes) -->
+    <div id="dayDetailsModal" class="fixed inset-0 z-40 hidden flex items-center justify-center bg-black/50 p-4 sm:p-8">
+        <!-- Modal Content. Usamos 'lg:max-h-[90vh]' para que sea grande pero deje espacio -->
+        <!-- Fondo del modal: bg-white en claro y dark:bg-gray-800 en oscuro -->
+        <div id="dayDetailsContent" class="w-full max-w-xl lg:max-w-3xl h-full lg:h-[90vh] rounded-xl shadow-2xl overflow-y-auto relative bg-white dark:bg-gray-800 transition-colors duration-300">
+            
+            <!-- Header Sticky -->
+            <!-- Fondo del header: utiliza el color dinámico de la tarjeta para cohesión -->
+            <div class="sticky top-0 p-4 sm:p-6 flex justify-between items-center border-b dark:border-gray-700 bg-bg-card transition-colors duration-300" style="z-index: 10;">
+                <h3 id="modalDayTitle" class="text-xl font-bold text-accent">Día Seleccionado</h3>
+                <button id="closeDayDetailsBtn" class="p-2 rounded-full hover:bg-primary-light-bg transition text-text-default">
+                    <!-- Close Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Body -->
+            <div class="p-4 sm:p-6">
+                <!-- Text Area - Título Simplificado a "Notas" -->
+                <label class="block text-sm font-medium mb-2 text-text-default">Notas:</label>
+                <!-- CLAVE: El fondo en modo claro se gestiona en el CSS para ser BLANCO PURO -->
+                <textarea id="dayNotesTextarea" class="w-full h-40 p-3 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 text-text-default focus:border-primary-accent focus:ring-1 focus:ring-primary-accent transition resize-none"></textarea>
+                
+                <!-- Audio Section: ID añadido para control de estilo en CSS -->
+                <div id="audioSectionContainer" class="mt-6 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-bg-main">
+                    <!-- Título Simplificado a "Mensaje de Audio" -->
+                    <label class="block text-sm font-medium mb-3 text-accent">Mensaje de Audio:</label>
+                    
+                    <!-- Audio Player Controls -->
+                    <div id="audioPlayerContainer" class="flex items-center gap-3 hidden">
+                        <button id="playPauseAudioBtn" class="w-10 h-10 rounded-full text-white flex items-center justify-center hover:opacity-90 transition" style="background-color: var(--primary-color);">
+                            <!-- Play Icon (Default) -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 10.761v4.477a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                        <div class="flex-grow">
+                            <input type="range" id="audioProgressBar" value="0" min="0" max="100" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-text-muted mt-1">
+                                <span id="audioCurrentTime">0:00</span>
+                                <span id="audioDuration">0:00</span>
+                            </div>
+                        </div>
+                        <button id="deleteAudioBtn" class="w-10 h-10 rounded-full text-red-500 border border-red-500 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 transition hidden" title="Eliminar Audio">
+                            <!-- Trash Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Audio Upload Container (Inicialmente Visible) -->
+                    <div id="audioUploadContainer" class="flex items-center gap-3 mt-4">
+                        <input type="file" id="dayAudioUpload" accept="audio/*" class="hidden">
+                        <button id="triggerAudioUploadBtn" class="flex-grow p-3 text-sm font-semibold text-white rounded-lg transition hover:opacity-90" style="background-color: var(--primary-color);">
+                            Subir Audio
+                        </button>
+                    </div>
+
+                    <!-- NUEVA SECCIÓN: Grabación de Audio (Simplificada, sin caja gris y sin texto de título) -->
+                    <div id="audioRecorderContainer" class="mt-4 flex gap-3">
+                        <button id="startRecordingBtn" class="flex-grow p-3 text-sm font-semibold text-white rounded-lg transition hover:opacity-90 bg-red-500 flex items-center justify-center gap-2">
+                            <!-- Mic Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7v0m1-7.7A2 2 0 1113 11a2 2 0 01-1 1.7V21M3 11a7 7 0 0114 0m0 0V21" /></svg>
+                            <span>Iniciar Grabación</span>
+                        </button>
+                        <!-- Botón de Detener: Inicialmente oculto, solo se muestra al grabar -->
+                        <button id="stopRecordingBtn" class="flex-grow p-3 text-sm font-semibold text-white rounded-lg transition hover:opacity-90 bg-gray-500 flex items-center justify-center gap-2 hidden" disabled>
+                            <!-- Stop Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M10 9h4v6h-4z" /></svg>
+                            <span>Detener</span>
+                        </button>
+                    </div>
+                    <!-- Mensaje de estado de la grabación (Se mantiene) -->
+                    <div id="recordingStatus" class="text-center font-semibold mt-3 text-red-500 hidden"></div>
+                    
+                    <audio id="dayAudioElement" class="hidden"></audio>
+                </div>
+                
+                <!-- Save Button -->
+                <button id="saveDayDataBtn" class="mt-6 w-full p-3 text-lg font-bold text-white rounded-lg transition hover:opacity-90" style="background-color: var(--primary-color);">
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- End Day Details Modal -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const currentMonthYear = document.getElementById('currentMonthYear');
+            const weekDaysContainer = document.getElementById('weekDays');
+            const prevMonthBtn = document.getElementById('prevMonth');
+            const nextMonthBtn = document.getElementById('nextMonth');
+            const themeToggle = document.getElementById('themeToggle');
+            const colorButtons = document.querySelectorAll('.color-button'); 
+            const body = document.body;
+            const coverImageUpload = document.getElementById('coverImageUpload');
+            const uploadedImage = document.getElementById('uploadedImage');
+            const imageCoverArea = document.getElementById('imageCoverArea');
+            
+            // Variables del modal/ajustes
+            const settingsModal = document.getElementById('settingsModal');
+            const openSettingsBtn = document.getElementById('openSettingsBtn');
+            const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+            const resetSettingsBtn = document.getElementById('resetSettingsBtn'); // Ahora solo para portada
+            
+            // Variables del Modal Diario
+            const dayDetailsModal = document.getElementById('dayDetailsModal');
+            const dayDetailsContent = document.getElementById('dayDetailsContent');
+            const closeDayDetailsBtn = document.getElementById('closeDayDetailsBtn');
+            const modalDayTitle = document.getElementById('modalDayTitle');
+            const dayNotesTextarea = document.getElementById('dayNotesTextarea');
+            const dayAudioUpload = document.getElementById('dayAudioUpload');
+            const triggerAudioUploadBtn = document.getElementById('triggerAudioUploadBtn');
+            // Nota: deleteAudioBtn ahora está dentro de audioPlayerContainer en el HTML
+            const saveDayDataBtn = document.getElementById('saveDayDataBtn');
+            const modalToast = document.getElementById('modalToast');
+            const audioSectionContainer = document.getElementById('audioSectionContainer');
+
+            const dayAudioElement = document.getElementById('dayAudioElement');
+            const audioPlayerContainer = document.getElementById('audioPlayerContainer');
+            const playPauseAudioBtn = document.getElementById('playPauseAudioBtn');
+            const deleteAudioBtn = document.getElementById('deleteAudioBtn'); // Re-obtener la referencia
+            const audioProgressBar = document.getElementById('audioProgressBar');
+            const audioCurrentTime = document.getElementById('audioCurrentTime');
+            const audioDuration = document.getElementById('audioDuration');
+            
+            // Contenedores de opciones de audio
+            const audioUploadContainer = document.getElementById('audioUploadContainer');
+            const audioRecorderContainer = document.getElementById('audioRecorderContainer');
+
+            // Variables de Grabación
+            const startRecordingBtn = document.getElementById('startRecordingBtn');
+            const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+            const recordingStatus = document.getElementById('recordingStatus');
+            let mediaRecorder;
+            let audioChunks = [];
+            let audioStream; // Almacena la pista del micrófono para poder detenerla
+
+            let currentDate = new Date(); // Fecha actual para mantener el seguimiento
+            const today = new Date(); // Para marcar el día de hoy
+            let currentDay = null; // Almacena el número del día (1-31) del modal abierto
+            
+            // Límite de Audio: 500 KB
+            const MAX_SIZE_KB = 500;
+            const MAX_SIZE_BYTES = MAX_SIZE_KB * 1024;
+            
+            // Almacenamiento de configuraciones por mes (YYYY-MM)
+            let perMonthSettings = JSON.parse(localStorage.getItem('calendarPerMonthSettings')) || {};
+            const defaultColor = '#4F46E5';
+            const defaultTheme = 'light';
+
+            // Nombres de días y meses en español
+            const daysOfWeek = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+            // --- Funciones de Utilidad ---
+
+            /**
+             * Muestra un mensaje temporal en un toast.
+             * Modificado para mostrar solo errores y la confirmación de guardado.
+             */
+            function modalMessage(message, type = 'info') {
+                // Solo mostrar si es 'success' (para guardar datos) o 'error'
+                if (type === 'success' || type === 'error') {
+                    modalToast.textContent = message;
+                    modalToast.style.backgroundColor = type === 'error' ? '#EF4444' : '#10B981';
+                    modalToast.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        modalToast.style.opacity = '0';
+                    }, 3000);
+                }
+                // Si es 'info' (como el aviso de reproducción automática), se ignora
+            }
+
+            /**
+             * Formatea segundos a M:SS.
+             */
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                // Si la duración es inválida, se mostrará 0:00 hasta que se arregle
+                if (isNaN(minutes) || isNaN(remainingSeconds) || seconds < 0) return '0:00';
+                
+                return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+            }
+
+            /**
+             * Obtiene la clave de almacenamiento (YYYY-MM) para el mes actual.
+             */
+            function getCurrentMonthKey() {
+                const year = currentDate.getFullYear();
+                const month = String(currentDate.getMonth() + 1).padStart(2, '0'); 
+                return `${year}-${month}`;
+            }
+
+            /**
+             * Comprueba si un día tiene notas de texto o audio.
+             * CLAVE: Se asegura de usar la clave del día como STRING.
+             */
+            function dayHasData(day) {
+                const key = getCurrentMonthKey();
+                const settings = perMonthSettings[key];
+                const dayKey = String(day); // <--- Cambio aquí: Usar clave de cadena
+                
+                if (settings && settings.days && settings.days[dayKey]) { // <--- Cambio aquí: Usar clave de cadena
+                    const data = settings.days[dayKey]; // <--- Cambio aquí: Usar clave de cadena
+                    
+                    const hasNotes = data.notes && data.notes.trim() !== '';
+                    const hasAudio = data.audioBase64 && data.audioBase64.trim() !== '';
+                    
+                    return hasNotes || hasAudio; 
+                }
+                return false;
+            }
+
+            /**
+             * Rellena la cuadrícula de los días de la semana (Lunes a Domingo).
+             */
+            function renderWeekDays() {
+                weekDaysContainer.innerHTML = '';
+                daysOfWeek.forEach(day => {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'text-center py-2 font-bold text-accent-light';
+                    dayElement.textContent = day;
+                    weekDaysContainer.appendChild(dayElement);
+                });
+            }
+
+            /**
+             * Genera la cuadrícula del calendario para la fecha actual.
+             */
+            function renderCalendar() {
+                const month = currentDate.getMonth();
+                const year = currentDate.getFullYear();
+                currentMonthYear.textContent = `${monthNames[month]} ${year}`;
+
+                let firstDayOfMonth = new Date(year, month, 1).getDay(); 
+                firstDayOfMonth = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; 
+
+                const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+
+                calendarGrid.innerHTML = '';
+
+                // Días vacíos iniciales (padding)
+                for (let i = 0; i < firstDayOfMonth; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'day-cell opacity-60 rounded-xl';
+                    emptyCell.style.backgroundColor = 'var(--primary-light-card)';
+                    calendarGrid.appendChild(emptyCell);
+                }
+
+                // Días del mes
+                for (let day = 1; day <= lastDateOfMonth; day++) {
+                    const dayCell = document.createElement('div');
+                    dayCell.className = 'day-cell text-text-default hover:shadow-lg transition-all duration-150';
+                    
+                    // Contenedor interno para centrar el número y el indicador
+                    const dayContentContainer = document.createElement('div');
+                    dayContentContainer.className = 'day-number-container';
+
+                    const dayNumber = document.createElement('span');
+                    dayNumber.textContent = day;
+                    dayNumber.className = 'font-semibold leading-none'; // Añadir peso y asegurar que no hay margen extra
+                    dayContentContainer.appendChild(dayNumber);
+
+                    // AÑADIDO: Comprobar si hay TEXTO O AUDIO y añadir el indicador
+                    if (dayHasData(day)) {
+                        const indicator = document.createElement('div');
+                        indicator.className = 'has-data-indicator';
+                        dayContentContainer.appendChild(indicator);
+                    }
+
+                    dayCell.appendChild(dayContentContainer); // Agregar el contenedor de contenido a la celda
+                    
+                    // Marcar el día actual
+                    if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                        dayCell.classList.add('current-day');
+                    }
+                    
+                    // Manejador de clic para abrir el modal de detalles
+                    dayCell.addEventListener('click', () => {
+                        openDayDetailsModal(day);
+                    });
+
+                    calendarGrid.appendChild(dayCell);
+                }
+            }
+            
+            // --- Funciones de Navegación y Tema (Sin Cambios en lógica) ---
+
+            function goToPrevMonth() {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                loadThemeForCurrentMonth();
+                renderCalendar();
+            }
+
+            function goToNextMonth() {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                loadThemeForCurrentMonth();
+                renderCalendar();
+            }
+
+            // --- Funciones de Personalización y Almacenamiento (Optimizado) ---
+            
+            // CRÍTICO: ELIMINAR LA DOBLE DECLARACIÓN. Esta es la que se queda.
+            const safeImageErrorHandler = function() {
+                // Si la imagen Base64 falla por corrupción o tamaño, forzamos la vuelta al estado de placeholder
+                if (this.src && !this.src.includes('placehold')) {
+                    this.src = ''; // Borrar el src
+                    this.classList.add('opacity-0');
+                    imageCoverArea.classList.remove('has-cover-image');
+                    
+                    const key = getCurrentMonthKey();
+                    // Limpiar la referencia rota en el storage para evitar que el error persista
+                    if (perMonthSettings[key] && perMonthSettings[key].imageSrc) {
+                         perMonthSettings[key].imageSrc = '';
+                         saveCurrentMonthSettings(false); // No necesitamos guardar dos veces
+                         modalMessage("La imagen de portada falló al cargar y fue eliminada del mes actual.", 'error'); // Mensaje de ERROR PERMANECE
+                    }
+                }
+                // Importante: Eliminar el handler después de un error para no dispararse repetidamente.
+                uploadedImage.removeEventListener('error', safeImageErrorHandler);
+            };
+
+            // Listener que se dispara cuando la imagen se carga (o cuando se le asigna un src nuevo)
+            uploadedImage.onload = function() {
+                // Si se carga correctamente, configuramos el error handler para detectar fallos posteriores
+                uploadedImage.removeEventListener('error', safeImageErrorHandler); // Limpiar por si acaso
+                uploadedImage.addEventListener('error', safeImageErrorHandler);
+            };
+
+
+            /**
+             * Carga y aplica el tema, color y portada guardados para el mes actual.
+             */
+            function loadThemeForCurrentMonth() {
+                const key = getCurrentMonthKey();
+                const storedSettings = perMonthSettings[key];
+                
+                // CRÍTICO: Fusionamos los ajustes guardados con los valores por defecto
+                const settings = { 
+                    color: storedSettings ? storedSettings.color : defaultColor, 
+                    theme: storedSettings ? storedSettings.theme : defaultTheme,
+                    imageSrc: storedSettings ? storedSettings.imageSrc : '', 
+                    days: storedSettings && storedSettings.days ? storedSettings.days : {}
+                };
+                
+                perMonthSettings[key] = settings;
+
+                // Aplicar Tema
+                themeToggle.value = settings.theme;
+                toggleTheme(settings.theme, false);
+
+                // Aplicar Color (Esto también maneja el anillo de selección)
+                setAccentColor(settings.color, false);
+                
+                // Aplicar Portada
+                uploadedImage.removeEventListener('error', safeImageErrorHandler); // Desactivar temporalmente el error handler
+                if (settings.imageSrc) {
+                    uploadedImage.src = settings.imageSrc;
+                    uploadedImage.classList.remove('opacity-0');
+                    imageCoverArea.classList.add('has-cover-image'); 
+                } else {
+                    uploadedImage.src = '';
+                    uploadedImage.classList.add('opacity-0');
+                    imageCoverArea.classList.remove('has-cover-image'); 
+                }
+                // Si la imagen se cargó (onload se disparará), se reasignará el error handler.
+            }
+
+            /**
+             * Guarda la configuración actual (incluyendo la imagen y los datos diarios) del mes.
+             */
+            function saveCurrentMonthSettings(updateImageSrc = true) {
+                const key = getCurrentMonthKey();
+                
+                // CRÍTICO: Obtenemos los días existentes en memoria para no perderlos
+                const existingDays = perMonthSettings[key] && perMonthSettings[key].days ? perMonthSettings[key].days : {};
+                
+                // Inicializar el objeto perMonthSettings[key] si no existe, para asegurar que existingImageSrc no falle
+                perMonthSettings[key] = perMonthSettings[key] || {};
+                const existingImageSrc = perMonthSettings[key].imageSrc || '';
+
+
+                let finalImageSrc = existingImageSrc;
+                if (updateImageSrc) {
+                    // Si updateImageSrc es true, usamos el src actual del elemento de imagen DOM (que ya tiene el Base64)
+                    finalImageSrc = uploadedImage.src; 
+                }
+                
+                // Sobrescrivimos la configuración del mes con todos los datos necesarios
+                perMonthSettings[key] = {
+                    color: document.documentElement.style.getPropertyValue('--primary-color') || defaultColor,
+                    theme: body.classList.contains('dark-theme') ? 'dark' : 'light',
+                    imageSrc: finalImageSrc,
+                    // Aseguramos que los datos de los días se conserven
+                    days: existingDays 
+                };
+
+                localStorage.setItem('calendarPerMonthSettings', JSON.stringify(perMonthSettings));
+            }
+
+
+            function toggleTheme(theme, save = true) {
+                if (theme === 'dark') {
+                    body.classList.add('dark-theme');
+                    body.classList.add('dark');
+                    // Ajustar el modal de detalles
+                    dayDetailsContent.classList.remove('bg-white');
+                    dayDetailsContent.classList.add('dark:bg-gray-800');
+                    // Aseguramos que el fondo del audio use el color correcto para el modo oscuro
+                    audioSectionContainer.classList.add('dark:bg-gray-700'); 
+                } else {
+                    body.classList.remove('dark-theme');
+                    body.classList.remove('dark');
+                     // Ajustar el modal de detalles
+                    dayDetailsContent.classList.remove('dark:bg-gray-800');
+                    dayDetailsContent.classList.add('bg-white');
+                    // Aseguramos que el fondo del audio use el color correcto para el modo claro
+                    audioSectionContainer.classList.remove('dark:bg-gray-700');
+                }
+                
+                // Reaplicar color para recalcular las variables dinámicas de color pastel si el tema cambia
+                setAccentColor(document.documentElement.style.getPropertyValue('--primary-color') || defaultColor, save);
+                
+                // No llamamos a saveCurrentMonthSettings aquí directamente. Lo hace setAccentColor.
+            }
+
+            function getThemeColors(color, isDark) {
+                // ... (La lógica de generación de colores permanece sin cambios)
+                if (isDark) {
+                    let lightBg; 
+                    let cardBg; 
+                    
+                    switch(color) {
+                        case '#4F46E5': lightBg = '#312E81'; cardBg = '#1E243A'; break; 
+                        case '#EF4444': lightBg = '#991B1B'; cardBg = '#2F1A1A'; break; 
+                        case '#10B981': lightBg = '#065F46'; cardBg = '#14382B'; break; 
+                        case '#F59E0B': lightBg = '#92400E'; cardBg = '#3A291A'; break; 
+                        case '#8B5CF6': lightBg = '#5B21B6'; cardBg = '#2A1A3A'; break; 
+                        case '#06B6D4': lightBg = '#0E7490'; cardBg = '#14313B'; break; 
+                        case '#D946EF': lightBg = '#86198F'; cardBg = '#3A1A3A'; break; 
+                        case '#6B7280': lightBg = '#374151'; cardBg = '#2A3036'; break; 
+                        default: lightBg = '#374151'; cardBg = '#1F2937';
+                    }
+
+                    return {
+                        primary_light: '#9CA3AF', 
+                        primary_light_bg: lightBg, 
+                        primary_light_card: cardBg,
+                        bg_main: '#111827' 
+                    };
+                } else {
+                    let lightBg; 
+                    let primaryLight; 
+                    let cardBg; 
+                    
+                    switch(color) {
+                        case '#4F46E5': lightBg = '#EEF2FF'; primaryLight = '#A5B4FC'; cardBg = '#F3F5FF'; break; 
+                        case '#EF4444': lightBg = '#FEE2E2'; primaryLight = '#FCA5A5'; cardBg = '#FFF5F5'; break; 
+                        case '#10B981': lightBg = '#D1FAE5'; primaryLight = '#6EE7B7'; cardBg = '#F0FDF4'; break; 
+                        case '#F59E0B': lightBg = '#FEF3C7'; primaryLight = '#FCD34D'; cardBg = '#FFFBEB'; break; 
+                        case '#8B5CF6': lightBg = '#EDE9FE'; primaryLight = '#C4B5FD'; cardBg = '#FAF5FF'; break; 
+                        case '#06B6D4': lightBg = '#CFFAFE'; primaryLight = '#67E8F9'; cardBg = '#F0FDFF'; break; 
+                        case '#D946EF': lightBg = '#F5D0FE'; primaryLight = '#E9D5FF'; cardBg = '#FAF5FF'; break; 
+                        case '#6B7280': lightBg = '#E5E7EB'; primaryLight = '#D1D5DB'; cardBg = '#F9FAFB'; break; 
+                        default: lightBg = '#EEF2FF'; primaryLight = '#A5B4FC'; cardBg = '#FFFFFF';
+                    }
+
+                    return {
+                        primary_light: primaryLight, 
+                        primary_light_bg: lightBg, 
+                        primary_light_card: cardBg,
+                        bg_main: '#F9FAFB' 
+                    };
+                }
+            }
+
+
+            function setAccentColor(color, save = true) {
+                const isDark = body.classList.contains('dark-theme');
+                const themeColors = getThemeColors(color, isDark);
+
+                document.documentElement.style.setProperty('--primary-color', color);
+                document.documentElement.style.setProperty('--primary-light', themeColors.primary_light); 
+                document.documentElement.style.setProperty('--primary-light-bg', themeColors.primary_light_bg);
+                document.documentElement.style.setProperty('--primary-light-card', themeColors.primary_light_card);
+                document.documentElement.style.setProperty('--bg-main', themeColors.bg_main);
+
+                colorButtons.forEach(btn => btn.classList.remove('ring-4', 'ring-offset-2', 'ring-offset-bg-card', 'ring-primary-accent'));
+                const selectedBtn = document.querySelector(`[data-color="${color}"]`);
+                if (selectedBtn) {
+                    selectedBtn.classList.add('ring-4', 'ring-offset-2', 'ring-offset-bg-card', 'ring-primary-accent');
+                }
+
+                if (save) saveCurrentMonthSettings(false); // No tocamos la imagen al cambiar solo el color
+                
+                renderCalendar(); 
+                renderWeekDays(); 
+            }
+
+            /**
+             * NUEVA FUNCIÓN: Restablece solo la portada del mes actual.
+             */
+            function resetCurrentMonthSettings() {
+                const key = getCurrentMonthKey();
+                
+                // 1. Asegurarse de que la configuración del mes existe
+                perMonthSettings[key] = perMonthSettings[key] || {};
+
+                // 2. Eliminar la clave imageSrc
+                perMonthSettings[key].imageSrc = '';
+                
+                localStorage.setItem('calendarPerMonthSettings', JSON.stringify(perMonthSettings));
+                
+                // 3. Recargar y renderizar la vista
+                loadThemeForCurrentMonth();
+                renderCalendar(); 
+                modalMessage("Imagen de portada eliminada.", 'success'); // Mensaje de éxito específico
+            }
+
+
+            // --- Funciones de Interfaz (Subida de Imagen) ---
+            
+            function handleImageUpload() {
+                const file = coverImageUpload.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const imageBase64 = e.target.result;
+                        
+                        // 1. Update UI (immediate display)
+                        uploadedImage.removeEventListener('error', safeImageErrorHandler);
+
+                        uploadedImage.src = imageBase64;
+                        uploadedImage.classList.remove('opacity-0');
+                        imageCoverArea.classList.add('has-cover-image'); 
+                        
+                        // 2. Force save to storage, reading the new src from the DOM element.
+                        saveCurrentMonthSettings(true); 
+
+                        // El mensaje de éxito general fue eliminado en el paso anterior.
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            // --- Funciones de Modal Diario y Audio ---
+
+            /**
+             * Configura los controladores del reproductor de audio.
+             */
+            function setupAudioPlayer() {
+                // Actualiza la duración total
+                dayAudioElement.onloadedmetadata = () => {
+                    // Función interna para comprobar y actualizar la duración, manejando problemas de timing (NaN/Infinity)
+                    const updateDuration = () => {
+                        const duration = dayAudioElement.duration;
+                        
+                        // Si la duración no es un número finito o es cero, intentamos de nuevo en un momento
+                        if (!isFinite(duration) || duration <= 0) {
+                            setTimeout(updateDuration, 100);
+                            return; 
+                        }
+                        
+                        audioDuration.textContent = formatTime(duration);
+                        audioProgressBar.max = duration;
+                    };
+                    updateDuration();
+                };
+
+                // Actualiza la barra de progreso
+                dayAudioElement.ontimeupdate = () => {
+                    const currentTime = dayAudioElement.currentTime;
+                    audioCurrentTime.textContent = formatTime(currentTime);
+                    audioProgressBar.value = currentTime;
+                };
+
+                // Maneja el final del audio
+                dayAudioElement.onended = () => {
+                    audioProgressBar.value = 0;
+                    audioCurrentTime.textContent = '0:00';
+                    playPauseAudioBtn.innerHTML = getPlayIcon();
+                };
+
+                // Play/Pause button click handler
+                playPauseAudioBtn.onclick = () => {
+                    if (dayAudioElement.paused) {
+                        dayAudioElement.play();
+                    } else {
+                        dayAudioElement.pause();
+                    }
+                };
+                
+                // Actualiza el icono al cambiar de estado
+                dayAudioElement.onplay = () => {
+                    playPauseAudioBtn.innerHTML = getPauseIcon();
+                };
+                dayAudioElement.onpause = () => {
+                    playPauseAudioBtn.innerHTML = getPlayIcon();
+                };
+
+                // Permite buscar en el audio arrastrando la barra
+                audioProgressBar.oninput = () => {
+                    dayAudioElement.currentTime = audioProgressBar.value;
+                };
+                
+                // Inicializa con el icono de Play
+                playPauseAudioBtn.innerHTML = getPlayIcon();
+            }
+            
+            /**
+             * Icono SVG de Play.
+             */
+            function getPlayIcon() {
+                return `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 10.761v4.477a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                `;
+            }
+            
+            /**
+             * Icono SVG de Pausa.
+             */
+            function getPauseIcon() {
+                return `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                `;
+            }
+
+
+            /**
+             * Inicia la grabación del micrófono.
+             */
+            async function startRecording() {
+                // Previene problemas si se intenta grabar mientras se está reproduciendo el audio
+                dayAudioElement.pause(); 
+                
+                if (!navigator.mediaDevices || !window.MediaRecorder) {
+                    modalMessage("Tu navegador no soporta la grabación de audio. Intenta actualizarlo.", 'error');
+                    return;
+                }
+
+                try {
+                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // Preferir el formato webm si es posible
+                    mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                        
+                        // Validación de tamaño de grabación (500KB)
+                        if (audioBlob.size > MAX_SIZE_BYTES) {
+                            modalMessage(`La grabación es demasiado grande (máx ${MAX_SIZE_KB}KB). Elimina la entrada y vuelve a intentar.`, 'error');
+                            // Borrar el audio de la interfaz si falla
+                            deleteDayAudio(false); // No mostrar mensaje de info
+                            return;
+                        }
+
+                        // Convertir Blob a Base64
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const audioBase64 = reader.result;
+                            
+                            // Asignar el audio Base64 al elemento de audio
+                            dayAudioElement.src = audioBase64;
+                            dayAudioElement.load();
+                            
+                            // Mostrar solo el reproductor y ocultar las opciones de subir/grabar
+                            updateAudioUI(true); 
+                            
+                            // Mensaje ELIMINADO
+
+                        };
+                        reader.readAsDataURL(audioBlob);
+
+                        // Detener la pista del micrófono
+                        if (audioStream) audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    };
+
+                    mediaRecorder.start();
+
+                    // Actualizar UI para grabación
+                    startRecordingBtn.classList.add('hidden');
+                    stopRecordingBtn.classList.remove('hidden');
+                    stopRecordingBtn.disabled = false;
+                    recordingStatus.classList.remove('hidden');
+                    recordingStatus.textContent = "🔴 Grabando... Pulsa Detener cuando termines.";
+
+                } catch (err) {
+                    console.error('Error al acceder al micrófono:', err);
+                    modalMessage("Necesitas dar permiso al micrófono para grabar. Recarga la página si lo cambiaste.", 'error');
+                    // Asegurar que las pistas se detienen si falla el inicio
+                    if (audioStream) audioStream.getTracks().forEach(track => track.stop());
+                    audioStream = null;
+                    
+                    // Restaurar UI
+                    startRecordingBtn.classList.remove('hidden');
+                    stopRecordingBtn.classList.add('hidden');
+                    stopRecordingBtn.disabled = true;
+                    recordingStatus.classList.add('hidden');
+                }
+            }
+
+            /**
+             * Detiene la grabación.
+             */
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                
+                // Actualizar UI
+                startRecordingBtn.classList.remove('hidden');
+                stopRecordingBtn.classList.add('hidden');
+                stopRecordingBtn.disabled = true;
+                recordingStatus.classList.add('hidden');
+            }
+            
+            /**
+             * Actualiza la interfaz de audio para mostrar el reproductor u ocultarlo y mostrar las opciones.
+             */
+            function updateAudioUI(hasAudio) {
+                if (hasAudio) {
+                    audioPlayerContainer.classList.remove('hidden');
+                    deleteAudioBtn.classList.remove('hidden');
+                    audioUploadContainer.classList.add('hidden');
+                    audioRecorderContainer.classList.add('hidden');
+                } else {
+                    audioPlayerContainer.classList.add('hidden');
+                    deleteAudioBtn.classList.add('hidden');
+                    audioUploadContainer.classList.remove('hidden');
+                    audioRecorderContainer.classList.remove('hidden');
+                    
+                    // Asegurar que el botón de Detener esté oculto cuando no hay audio
+                    startRecordingBtn.classList.remove('hidden');
+                    stopRecordingBtn.classList.add('hidden');
+                    recordingStatus.classList.add('hidden');
+                }
+            }
+
+
+            /**
+             * Carga los datos (notas y audio) para el día actual y configura el modal.
+             * CLAVE: Se asegura de usar la clave del día como STRING.
+             */
+            function loadDayData(day) {
+                const key = getCurrentMonthKey();
+                
+                // CRÍTICO: Aseguramos que el mes tenga la estructura de ajustes completa y cargada
+                loadThemeForCurrentMonth();
+                
+                // Asegurar que days existe (redundante gracias a loadThemeForCurrentMonth, pero seguro)
+                perMonthSettings[key].days = perMonthSettings[key].days || {};
+                
+                const dayKey = String(day); // <--- Usar clave de cadena
+                const dayData = perMonthSettings[key].days[dayKey] || { notes: '', audioBase64: '' }; // <--- Usar clave de cadena
+
+                modalDayTitle.textContent = `${day} de ${monthNames[currentDate.getMonth()]}`;
+                
+                // CORRECCIÓN: Usar coalescencia nula para asegurar que notes siempre sea una cadena
+                dayNotesTextarea.value = dayData.notes ?? '';
+                
+                // --- Cargar Audio ---
+                // Parar cualquier grabación o reproducción activa
+                dayAudioElement.pause();
+                dayAudioElement.currentTime = 0;
+                stopRecording(); // Asegurarse de que el MediaRecorder esté inactivo
+                
+                if (dayData.audioBase64) {
+                    dayAudioElement.src = dayData.audioBase64;
+                    dayAudioElement.load(); // Cargar metadatos
+                    updateAudioUI(true); // Mostrar reproductor, ocultar opciones
+                    
+                } else {
+                    dayAudioElement.src = '';
+                    dayAudioElement.load();
+                    updateAudioUI(false); // Ocultar reproductor, mostrar opciones
+                    
+                    // Resetear la duración en la UI
+                    audioDuration.textContent = '0:00';
+                    audioCurrentTime.textContent = '0:00';
+                    audioProgressBar.value = 0;
+                    playPauseAudioBtn.innerHTML = getPlayIcon();
+                }
+            }
+            
+            /**
+             * Guarda las notas y el audio actuales en la estructura de datos del día.
+             * CLAVE: Lógica corregida para la eliminación del día.
+             */
+            function saveDayData() {
+                if (!currentDay) return;
+                // Asegurar que no haya grabación activa
+                stopRecording();
+
+                const key = getCurrentMonthKey();
+                
+                // CRÍTICO: Aseguramos que el mes tenga la estructura de ajustes completa y cargada
+                loadThemeForCurrentMonth(); 
+                
+                // Asegurar que days existe
+                perMonthSettings[key].days = perMonthSettings[key].days || {};
+                
+                const dayData = {};
+                const dayKey = String(currentDay); // <--- Usar clave de cadena
+                
+                // 1. Verificar Notas
+                const newNotes = dayNotesTextarea.value.trim();
+                const hasNotes = newNotes.length > 0;
+                // Solo añadir 'notes' si realmente hay contenido
+                if (hasNotes) {
+                    dayData.notes = newNotes;
+                }
+
+                // 2. Verificar Audio
+                const newAudioBase64 = dayAudioElement.src.startsWith('data:audio') ? dayAudioElement.src : '';
+                const hasAudio = newAudioBase64.length > 0;
+                
+                // Solo añadir 'audioBase64' si realmente hay audio
+                if (hasAudio) {
+                    dayData.audioBase64 = newAudioBase64;
+                }
+
+                // VERIFICACIÓN CLAVE: Si no hay notas Y no hay audio
+                if (!hasNotes && !hasAudio) {
+                    // ELIMINAR la entrada completa del día
+                    delete perMonthSettings[key].days[dayKey]; // <--- ELIMINACIÓN CORRECTA
+                } else {
+                    // Si hay contenido (notas O audio), guardar el objeto dayData
+                    perMonthSettings[key].days[dayKey] = dayData; // <--- GUARDADO
+                }
+
+
+                localStorage.setItem('calendarPerMonthSettings', JSON.stringify(perMonthSettings));
+                
+                // CLAVE: Volver a renderizar el calendario para actualizar el indicador
+                renderCalendar(); 
+                
+                modalMessage("Datos guardados", 'success'); // MENSAJE DE ÉXITO REQUERIDO
+                closeDayDetailsModal();
+            }
+
+            /**
+             * Sube el archivo de audio y lo convierte a Base64.
+             */
+            function handleAudioUpload() {
+                const file = dayAudioUpload.files[0];
+
+                if (file) {
+                    // Validación de tamaño (máximo 500 KB)
+                    if (file.size > MAX_SIZE_BYTES) {
+                         modalMessage(`El archivo de audio es demasiado grande (máx ${MAX_SIZE_KB}KB).`, 'error');
+                         dayAudioUpload.value = ''; // Resetear input
+                         return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const audioBase64 = e.target.result;
+                        
+                        dayAudioElement.src = audioBase64;
+                        dayAudioElement.load(); // Cargar el nuevo audio
+                        
+                        // Actualizar UI: Mostrar reproductor, ocultar opciones
+                        updateAudioUI(true); 
+                        
+                        // Mensaje ELIMINADO
+
+                        // Resetear el valor del input para que el evento 'change' se dispare de nuevo
+                        dayAudioUpload.value = '';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    dayAudioUpload.value = ''; 
+                }
+            }
+            
+            /**
+             * Elimina el audio del modal.
+             */
+            function deleteDayAudio(showMessage = true) {
+                // Parar audio y grabación
+                dayAudioElement.pause();
+                
+                // CRÍTICO: ELIMINAMOS EL SRC para que saveDayData sepa que debe borrarse
+                dayAudioElement.src = ''; 
+                dayAudioElement.load(); // <-- IMPORTANTE: Recargar para limpiar la fuente interna
+
+                // Ocultar reproductor, mostrar opciones
+                updateAudioUI(false);
+                
+                // Asegurar que el input de archivo esté limpio
+                dayAudioUpload.value = ''; 
+                
+                // Mensaje ELIMINADO
+            }
+            
+            /**
+             * Abre el modal de detalles del día.
+             */
+            function openDayDetailsModal(day) {
+                currentDay = day;
+                
+                // 1. Cargar datos
+                loadDayData(day);
+                dayDetailsModal.classList.remove('hidden');
+                dayDetailsModal.classList.add('flex');
+                
+                // 2. INTENTO DE REPRODUCCIÓN AUTOMÁTICA (NUEVO)
+                if (dayAudioElement.src && dayAudioElement.src.startsWith('data:audio')) {
+                    try {
+                        // Pequeño retraso para asegurar que los metadatos estén cargados
+                        setTimeout(() => {
+                            const playPromise = dayAudioElement.play();
+                            
+                            if (playPromise !== undefined) {
+                                playPromise.then(_ => {
+                                    // Reproducción iniciada con éxito
+                                }).catch(error => {
+                                    // La reproducción fue bloqueada (típico en algunos navegadores si no hay suficiente interacción)
+                                    console.warn("Reproducción automática bloqueada:", error);
+                                    // Mensaje ELIMINADO
+                                });
+                            }
+                        }, 100); 
+                    } catch(e) {
+                        console.error("Error al intentar la reproducción automática:", e);
+                    }
+                }
+            }
+
+            /**
+             * Cierra el modal de detalles del día.
+             */
+            function closeDayDetailsModal() {
+                // Parar audio y grabación
+                dayAudioElement.pause();
+                dayAudioElement.currentTime = 0;
+                stopRecording();
+
+                dayDetailsModal.classList.add('hidden');
+                dayDetailsModal.classList.remove('flex');
+                currentDay = null;
+            }
+
+
+            // --- Inicialización y Event Listeners ---
+
+            // Inicialización de la vista
+            renderWeekDays();
+            loadThemeForCurrentMonth(); 
+            renderCalendar();
+            setupAudioPlayer(); // Configurar una vez
+
+            // 1. Event Listeners para la Navegación
+            prevMonthBtn.addEventListener('click', goToPrevMonth);
+            nextMonthBtn.addEventListener('click', goToNextMonth);
+
+            // 2. Event Listeners para el Modal de Personalización (Ajustes)
+            openSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('-translate-x-full');
+            });
+            closeSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.add('-translate-x-full');
+            });
+            resetSettingsBtn.addEventListener('click', resetCurrentMonthSettings); // Función actualizada
+
+            // 3. Event Listeners para la Personalización (Temas y Colores)
+            themeToggle.addEventListener('change', (e) => {
+                toggleTheme(e.target.value);
+            });
+            
+            colorButtons.forEach(button => {
+                button.addEventListener('click', () => setAccentColor(button.dataset.color));
+            });
+
+            // 4. Event Listener para la Subida de Imagen
+            imageCoverArea.addEventListener('click', () => {
+                coverImageUpload.click();
+            });
+            // CRRECCIÓN: Se dispara el handler de subida de imagen y se llama a saveCurrentMonthSettings(true) DENTRO.
+            coverImageUpload.addEventListener('change', handleImageUpload); 
+            
+            // 5. Event Listeners para el Modal Diario
+            closeDayDetailsBtn.addEventListener('click', closeDayDetailsModal);
+            saveDayDataBtn.addEventListener('click', saveDayData);
+            
+            // Audio Upload
+            triggerAudioUploadBtn.addEventListener('click', () => dayAudioUpload.click());
+            dayAudioUpload.addEventListener('change', handleAudioUpload);
+            // CRÍTICO: Evento de Borrar Audio
+            deleteAudioBtn.addEventListener('click', deleteDayAudio);
+            
+            // NUEVOS Event Listeners para la Grabación de Audio
+            startRecordingBtn.addEventListener('click', startRecording);
+            stopRecordingBtn.addEventListener('click', stopRecording);
+        });
+    </script>
+</body>
+</html>
