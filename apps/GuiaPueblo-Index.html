@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinto</title>
+    <!-- Carga de Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuración de la fuente Inter por defecto */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el carrusel: permite el scroll horizontal con arrastre */
+        .carousel-container::-webkit-scrollbar {
+            display: none; /* Oculta la barra de scroll en Chrome/Safari */
+        }
+        .carousel-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+            scroll-behavior: smooth; /* Permite un scroll suave al usar las flechas */
+        }
+        /* Estilo base de la flecha (botón) */
+        .carousel-arrow {
+            /* Flex-shrink-0 es crucial para que el botón no se encoja */
+            flex-shrink: 0; 
+            z-index: 10;
+        }
+
+        /* Estilo para la Modal (siempre oculta por defecto) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 50; /* Z-index alto para estar sobre todo */
+            /* En modo oscuro, el fondo es más sutil */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Estilo para forzar la visibilidad (se usa con JS) */
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        /* Estilos del Switch (Toggle) */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6; /* blue-500 */
+        }
+    </style>
+    <!-- Configura Tailwind para usar la estrategia de clase para el modo oscuro -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Usa la clase 'dark' en el elemento raíz (<html>)
+        }
+    </script>
+</head>
+<!--
+    El elemento <html> debe ser donde se aplica la clase 'dark'. 
+    Esto se maneja mediante JS en la carga inicial.
+-->
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-start justify-center p-4 sm:p-8 transition-colors duration-300">
+
+    <!-- Switch de Modo Oscuro/Claro (Posicionado Fijo) -->
+    <div class="fixed top-4 left-4 z-40">
+        <div class="flex items-center space-x-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border dark:border-gray-700 transition-colors duration-300">
+            <!-- Icono del Sol (Modo Claro) -->
+            <svg id="icon-sun" class="h-6 w-6 text-yellow-500 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            
+            <!-- Toggle Switch -->
+            <label for="dark-mode-toggle" class="relative inline-block w-12 h-6 cursor-pointer">
+                <input type="checkbox" id="dark-mode-toggle" class="toggle-checkbox absolute opacity-0 w-0 h-0" onclick="toggleDarkMode()">
+                <!-- Fondo del switch -->
+                <span class="toggle-label bg-gray-300 dark:bg-gray-700 absolute inset-0 rounded-full transition-colors duration-300"></span>
+                <!-- Círculo que se mueve -->
+                <span class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 ease-in-out dark:translate-x-6 dark:bg-gray-200"></span>
+            </label>
+
+            <!-- Icono de la Luna (Modo Oscuro) -->
+            <svg id="icon-moon" class="h-6 w-6 text-gray-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+        </div>
+    </div>
+    <!-- Fin del Switch -->
+
+
+    <div class="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl dark:shadow-2xl dark:shadow-orange-900/50 rounded-2xl p-6 sm:p-10 mt-8 transition-colors duration-300">
+        
+        <!-- Contenedor del Título y el Botón de Eventos -->
+        <div class="flex justify-between items-center mb-6 border-b-4 border-orange-400 dark:border-orange-600 pb-2">
+            <!-- Título principal -->
+            <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-600 dark:text-orange-500 transition-colors duration-300 leading-tight">
+                Pinto
+            </h1>
+            
+            <!-- Botón de Eventos -->
+			<a href="GuiaPueblo-Eventos.html">
+				<button
+					onclick="openEvents()"
+					class="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-orange-300 dark:focus:ring-orange-700"
+					aria-label="Abrir sección de Eventos"
+				>
+					<!-- Icono de Agenda -->
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h.01M7 12h.01M16 12h.01M9 16h.01M17 16h.01M7 16h.01M6 21h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+					</svg>
+					<span class="hidden sm:inline">Eventos</span>
+					<span class="sm:hidden">Eventos</span>
+				</button>
+			</a>
+        </div>
+        
+        <!-- Contenedor del párrafo de información (Introducción) -->
+        <section id="introduccion" class="space-y-6 text-gray-700 dark:text-gray-300 leading-relaxed mb-10 transition-colors duration-300">
+            <!-- Párrafo de demostración con información del pueblo -->
+            <p class="text-lg sm:text-xl font-medium">
+                Pinto es una localidad y municipio español perteneciente a la Comunidad de Madrid, situado a unos 20 km al sur de la capital del país. Su población alcanza los 56 003 habitantes (INE 2024).
+            </p>
+            <p class="text-base sm:text-lg">
+				Antiguamente se pensaba que Pinto se encontraba situado en el centro geográfico de la península ibérica; de ahí su nombre, que proviene del latín punctum, 'punto'. Actualmente tiene instalado un monolito en el parque del Egido de la Fuente en el que relata una leyenda e identifica a Pinto como centro geográfico de la península ibérica.            </p>
+        </section>
+
+        <!-- SECCIÓN DE LUGARES Y NAVEGACIÓN POR PESTAÑAS -->
+        <section id="lugares" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 transition-colors duration-300">Explora el municipio</h2>
+
+            <!-- Menú de Pestañas (Tabs) -->
+            <nav class="flex flex-wrap gap-2 sm:gap-4 border-b border-gray-200 dark:border-gray-700 mb-6" id="tab-menu">
+                <button 
+                    id="btn-cultura"
+                    onclick="switchTab('cultura')"
+                    class="tab-btn px-4 py-2 text-sm sm:text-base font-semibold rounded-t-lg transition-colors duration-200 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-300 dark:hover:border-orange-500"
+                >
+                    Cultura
+                </button>
+                <button
+                    id="btn-centros-publicos"
+                    onclick="switchTab('centros-publicos')"
+                    class="tab-btn px-4 py-2 text-sm sm:text-base font-semibold rounded-t-lg transition-colors duration-200 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-300 dark:hover:border-orange-500"
+                >
+                    Centros Públicos
+                </button>
+                <button
+                    id="btn-parques"
+                    onclick="switchTab('parques')"
+                    class="tab-btn px-4 py-2 text-sm sm:text-base font-semibold rounded-t-lg transition-colors duration-200 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-300 dark:hover:border-orange-500"
+                >
+                    Parques
+                </button>
+                <button
+                    id="btn-ocio"
+                    onclick="switchTab('ocio')"
+                    class="tab-btn px-4 py-2 text-sm sm:text-base font-semibold rounded-t-lg transition-colors duration-200 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-300 dark:hover:border-orange-500"
+                >
+                    Ocio
+                </button>
+            </nav>
+
+  <!-- Contenedor del contenido de las pestañas -->
+            <div id="tab-content">
+                
+                <script>
+                    
+                    // =====================================================================
+                    // AÑADE AQUÍ LA PROPIEDAD 'imageUrl' CON LA URL ESPECÍFICA PARA CADA LUGAR
+                    // =====================================================================
+                    const PLACES_DATA = {
+                        'cultura': [
+                            { 
+                                title: "Torre de Éboli", 
+                                category: "Cultura", 
+                                description: "Torreón de Pinto, castillo de Pinto o torre de Éboli es una construcción medieval situada en Pinto, en la Comunidad de Madrid (España). Posee un gran valor histórico, pues en este edificio fueron confinados la Princesa de Éboli, Antonio Pérez, secretario del rey Felipe II, y, en 1808 y durante un breve período, Manuel Godoy, favorito de Carlos IV. Esta torre pudo haber sido construida a mediados del siglo XIV, a instancias de Íñigo López de Orozco, que recibió en esta época el señorío de Pinto, de manos de Pedro I el Cruel. Sus primeras referencias escritas datan de 1382 y en ellas se describe la visita del rey Juan I de Castilla al edificio, propiedad en aquel momento de Juana de Orozco. El torreón de Pinto fue utilizado, en los siglos XVI y XVII, como prisión de nobles e ilustres. Aquí estuvo recluida durante seis meses Ana de Mendoza y de la Cerda, princesa de Éboli, tras ser detenida el 28 de julio de 1579 por las tropas de Felipe II. Su delicado estado de salud y las malas condiciones del torreón motivaron su traslado, primeramente, al castillo de Santorcaz (Madrid) y, posteriormente, a su palacio de Pastrana (Guadalajara), donde murió en 1592.",
+                                // URL ÚNICA DE LA TORRE DE ÉBOLI: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/TorreEboli.jpg" 
+                            },
+                            { 
+                                title: "Teatro Municipal", 
+                                category: "Cultura", 
+                                description: "El Teatro Francisco Rabal de Pinto se inauguró en abril del año 2003. Recinto escénico en el que se fomentan y exhiben las artes escénicas como son el teatro, la música y la danza. Son muchos años programando todo tipo de espectáculos para el público adulto, familiar e infantil. El teatro pertenece a la Red Española de Teatros, Auditorios, Circuitos y Festivales de Titularidad Pública, y a la Red de Teatros de la Comunidad de Madrid. Está situado en la calle Alpujarras.",
+                                // URL ÚNICA DEL TEATRO MUNICIPAL: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/teatro.jpg" 
+                            },
+							{ 
+                                title: "Iglesia de Santo Domingo de Silos", 
+                                category: "Cultura", 
+                                description: "La iglesia de Santo Domingo de Silos es la iglesia parroquial de Pinto, perteneciente a la Diócesis de Getafe. Fue declarada bien de interés cultural por la Comunidad de Madrid en 2019. Levantada en el mismo lugar que una vez posiblemente hubo una mezquita árabe, tiene un origen visigodo, ya que estos fueron los primeros cristianos que poblaron Pinto. Tras esta iglesia de origen visigodo hay pruebas de que existió otra de estilo románico, ya que fue con el rey Alfonso VI en el año 1086 cuando Pinto fue arrebatado finalmente a los árabes. Con todos los datos que nos facilitan los antiguos documentos entre el siglo XV y el siglo XVII que aún se conservan, podemos asegurar que el edificio es aumentado en tamaño (pasando de ser un edificio de características románicas a góticas). La construcción tiene grandes proporciones, con reminiscencias góticas en sus cubiertas; de tres naves que se separan por arcos de medio punto decorados con rosetas y motivos geométricos, con crucero que no destaca al exterior, ábside poligonal y bóvedas de crucería.",
+                                // URL ÚNICA DEL TEATRO MUNICIPAL: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/iglesia.jpg" 
+                            },
+                        ],
+                        'centros-publicos': [
+                            { 
+                                title: "Ayuntamiento", 
+                                category: "C. Públicos", 
+                                description: "",
+                                imageUrl: "imagenes/ayuntamiento.jpg" // Reemplazar con URL real
+                            },
+                            { 
+                                title: "Arqueopinto", 
+                                category: "C. Públicos", 
+                                description: "Arqueopinto es el museo de la Prehistoria en la Comunidad de Madrid, un lugar en el que conocer todo sobre la evolución humana de manera amena y divertida. Y esa es su principal característica: los datos científicos presentados de forma didáctica para el público infantil. A través de diferentes recorridos al aire libre muy bien escenificados y donde se recrea la vida en esa época, los visitantes pueden atender a las explicaciones interactivas para saber más sobre la Prehistoria. Además, se organizan talleres interesantes que hacen que sean planes en familia perfectos.",
+                                imageUrl: "imagenes/arqueopinto.jpg" // Reemplazar con URL real
+                            },
+                            { 
+                                title: "Centro de Salud", 
+                                category: "C. Públicos", 
+                                description: "Este centro de salud presta atención continuada como centro de atención continuada médica de lunes a viernes de 21h a 8h y los sábados, domingos y festivos 24h. El centro está autorizado para el otorgamiento y solicitud de registro del documento de Instrucciones Previas. Precisa cita previa.",
+                                imageUrl: "imagenes/centrosalud.jpg" // Reemplazar con URL real
+                            }
+                        ],
+                        'parques': [
+                            { 
+                                title: "Parque Juan Carlos I", 
+                                category: "Parques", 
+                                description: "El parque Juan Carlos I tiene una extensión de 550.000 metros cuadrados y es la mayor área verde de Pinto. Tiene un lago de 2.000 metros cuadrados. El parque también dispone de un montón de infraestructuras y posibilidades para realizar diferentes actividades en familia: Una Zona de educación vial con circuito infantil con señales viales en el suelo, aparcamientos, rotondas, carriles… Los pequeños pueden usarlo con bicicletas o patines para aprender las normas básicas de circulación mientras juegan. Áreas de juegos infantiles con columpios Una pajarera llena de pavos reales y otras especies de aves a los que se puede dar de comer y conocer gracias a los paneles informativos que rodean el recinto. Una zona de juegos para niños a partir de 8 años con pirámides de cuerdas, mesas de ajedrez, pin pon y un multiespacio para jugar al fútbol sala, baloncesto… Restaurantes y terrazas como La Suite Del Lago. El área deportiva al aire libre la componen pistas de tenis, campos de fútbol, rocódromo, zona para patines y tablas y un carril bici. Un Auditorio: en distintas épocas del año, sobre todo coincidiendo con las fiestas de la localidad se realizan conciertos y representaciones teatrales. Área para esparcimiento canino. El Centro Hípico Pinto: en el que se imparten clases para todos los niveles. Además, paralelo al paseo central hay un itinerario botánico con diferentes especies de árboles y arbustos acompañados de sus fichas botánicas con información sobre cada uno de ellos. El parque dispone de dos zonas diferenciadas, una urbanizada y ajardinada con paseos y otra con caminos sin asfaltar y más agreste en la que nos encontraremos con parte del olivar que ocupaba esta zona y que se encuentra en proceso de regeneración.",
+                                imageUrl: "imagenes/juancarlos.jpg" // Reemplazar con URL real
+                            },
+                            { 
+                                title: "Parque del Egido", 
+                                category: "Parques", 
+                                description: "En el Egido se encuentra, según una vieja leyenda, el punto céntrico de la península ibérica. Es conocida como la Leyenda del Arca, y según información oficial del Ayuntamiento de Pinto, cuenta cómo los árabes hicieron unas mediciones que situaron en el Egido, concretamente en la esquina Xata, el punto céntrico de la península ibérica y, enterrado en este punto, un arca con los instrumentos utilizados para llevar a cabo tales mediciones. Actualmente tiene instalado un monolito para identificarlo, y de ahí su nombre, del latín “punctum”, punto, centro geográfico. Otro elemento peculiar del Egido es su vegetación, cuenta con unos 750 ejemplares de distintas especies vegetales. Los más numerosos son los abetos del Caúcaso, palmito elevado, pino carrasco, sófora, tejo, ciruelo, ciprés de Arizona, chopo, eucaplito, morera, olmo, palmera, fresno… lo que hace de él una de las zonas con mayor diversidad vegetal. Por todo ello, te aconsejamos que des un paseo por este parque tan lleno de historia.",
+                                imageUrl: "imagenes/egido1.jpg" // Reemplazar con URL real
+                            },
+                        ],
+                        'ocio': [
+                            { 
+                                title: "Plaza Eboli", 
+                                category: "Ocio", 
+                                description: "El Centro Comercial Plaza Éboli se encuentra ubicado en el municipio de Pinto, perteneciente a la Comunidad Autonómica de Madrid y situado a unos 20 km al sur de la capital. Inaugurado a principios del 2005, cuenta con una SBA de 30.000m² repartida en dos plantas comerciales y una planta superior destinada a restauración y ocio. El centro cuenta, además, con aparcamiento exterior propio y una planta de aparcamiento subterráneo, sumando más de 1.000 plazas de aparcamiento gratuito. Con más de 50 locales, Plaza Éboli ofrece una oferta variada y completa con las más reconocidas marcas de moda, ocio y restauración, entre las que podemos encontrar el hipermercado E-Leclerc, los rótulos de moda: H&M, Mango, Pull&Bear o Stradivarius, el gimnasio Nine Fitness, el mejor ocio para toda la familia: Ocine y Ozone Bowling, y ofertas de restauración para todos los gustos: Foster´s Hollywood, Pomodoro, 100 Montaditos o Burger King.",
+                                imageUrl: "imagenes/plazaeboli.jpg" // Reemplazar con URL real
+                            },
+                            { 
+                                title: "Polideportivo Municipal Príncipes de Asturias", 
+                                category: "Ocio", 
+                                description: "Polideportivo Municipal ubicado en el Parque Municipal Juan Carlos I, dentro de su área deportiva. El Polideportivo Príncipes de Asturias cuenta con un graderío para 5.051 espectadores y en su interior, dispone de 4 Salas para actividades dirigidas y un total de 20 Vestuarios. Su cancha polideportiva central, permite ser dividida en 3 secciones para poder obtener mejor rendimiento a dicha instalación deportiva. En su zona aledaña, cuenta con un Campo de fútbol de césped artificial, convertible en 2 campos de fútbol 7 y además dispone de un campo de fútbol 7 de césped artificial. Cuenta además con una pradera de calentamiento de césped artificial. Este polideportivo cuenta con servicios adaptados para personas con movilidad reducida, como acceso para sillas de ruedas y aparcamiento adaptado",
+                                imageUrl: "imagenes/polideportivo.jpg" // Reemplazar con URL real
+                            },
+                            { 
+                                title: "Piscina Municipal", 
+                                category: "Ocio", 
+                                description: "Para el disfrute y comodidad de los usuarios las instalaciones cuentan con los siguientes servicios: SplashPark – Parque infantil de agua, sin profundidad, con juegos para distintas edades (tobogán, tubos de agua, alternancia de chorros con diferentes formas, etc.) 1000 m² de zonas verdes con sistema independiente y automático de riego. Servicio médico disponible con personal cualificado. Socorristas con experiencia y titulación en vigor. Piscina olímpica de 50 x 25 metros. Piscina polivalente de 17 x 25 metros. Piscina de recreo de 17 x 11 metros. Merendero y bar. Botiquín.",
+                                imageUrl: "imagenes/piscina.jpg" // Reemplazar con URL real
+                            }
+                        ]
+                    };
+
+                    /**
+                     * Genera el HTML para una tarjeta de lugar.
+                     * @param {Object} place Objeto con la información del lugar.
+                     * @param {number} index Índice del lugar en su categoría.
+                     */
+                    const createCard = (place, index) => `
+						<div 
+							class="flex-shrink-0 w-64 md:w-72 lg:w-80 p-3 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 snap-start cursor-pointer"
+							onclick="showPlaceDetails('${place.title}', '${place.category}', '${place.description.replace(/'/g, "\\'")}', '${place.imageUrl ? place.imageUrl : `https://placehold.co/400x300/a8b9f1/1F2937?text=${encodeURIComponent(place.category.toUpperCase())}`}')"
+						>
+							<img 
+								src="${place.imageUrl ? place.imageUrl : `https://placehold.co/400x300/a8b9f1/1F2937?text=${encodeURIComponent(place.category.toUpperCase())}`}" 
+								alt="Imagen de ${place.title}" 
+								class="w-full h-40 object-cover rounded-lg mb-4"
+							>
+							<h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">${place.title}</h3>
+						</div>
+					`;
+
+                    
+                    /**
+                     * Genera el HTML para el carrusel de una categoría, incluyendo las flechas.
+                     * @param {string} categoryId El ID del contenedor de la pestaña (ej: 'tab-cultura').
+                     * @param {Array<Object>} places Array de objetos con la información de los lugares.
+                     */
+                    const createCarousel = (categoryId, places) => {
+                        const cardsHtml = places.map((place, index) => createCard(place, index)).join('');
+                        
+                        return `
+                            <div id="${categoryId}" class="tab-pane hidden">
+                                <div class="relative flex items-center">
+                                    
+                                    <!-- Flecha Izquierda (Oculta en móviles) -->
+                                    <button 
+                                        onclick="scrollCarousel('${categoryId}-carousel', -250)"
+                                        class="carousel-arrow hidden sm:block absolute -left-4 z-20 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-105 focus:outline-none"
+                                        aria-label="Anterior"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+
+                                    <!-- Contenedor del Carrusel Scrollable -->
+                                    <div id="${categoryId}-carousel" class="carousel-container flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 w-full px-1">
+                                        ${cardsHtml}
+                                    </div>
+                                    
+                                    <!-- Flecha Derecha (Oculta en móviles) -->
+                                    <button 
+                                        onclick="scrollCarousel('${categoryId}-carousel', 250)"
+                                        class="carousel-arrow hidden sm:block absolute -right-4 z-20 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-105 focus:outline-none"
+                                        aria-label="Siguiente"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+
+                                </div>
+                            </div>
+                        `;
+                    };
+                    
+                    /**
+                     * Desplaza el carrusel horizontalmente.
+                     * @param {string} containerId El ID del contenedor del carrusel.
+                     * @param {number} scrollAmount La cantidad de píxeles a desplazar (positivo para derecha, negativo para izquierda).
+                     */
+                    window.scrollCarousel = (containerId, scrollAmount) => {
+                        const container = document.getElementById(containerId);
+                        if (container) {
+                            container.scrollBy({
+                                left: scrollAmount,
+                                behavior: 'smooth'
+                            });
+                        }
+                    };
+
+                    /**
+                     * Muestra la ventana modal con la información detallada del lugar.
+                     * @param {string} title Título del lugar.
+                     * @param {string} category Categoría del lugar.
+                     * @param {string} description Descripción del lugar.
+                     */
+                   window.showPlaceDetails = (title, category, description, imageUrl) => {
+						const modal = document.getElementById('place-modal');
+						document.getElementById('modal-title').innerText = title;
+						document.getElementById('modal-description').innerText = description;
+						
+						// Mostrar la imagen real si existe, o un placeholder si no
+						document.getElementById('modal-image').src = imageUrl 
+							? imageUrl 
+							: `https://placehold.co/800x600/0E7490/FFFFFF?text=${encodeURIComponent(title.toUpperCase())}`;
+						document.getElementById('modal-image').alt = `Imagen de ${title}`;
+
+						modal.classList.add('active');
+						document.body.classList.add('overflow-hidden'); // Para evitar el scroll del fondo
+					};
+
+                    /**
+                     * Oculta la ventana modal.
+                     */
+                    window.hideModal = () => {
+                        document.getElementById('place-modal').classList.remove('active');
+                        document.body.classList.remove('overflow-hidden');
+                    };
+
+                    /**
+                     * Función placeholder para el botón de Eventos.
+                     * La funcionalidad se implementará más tarde.
+                     */
+                    window.openEvents = () => {
+                        console.log("¡Botón de Eventos pulsado! Implementar funcionalidad aquí.");
+                        // Por ejemplo: showEventsModal(); o window.location.hash = '#events';
+                    };
+
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const tabContent = document.getElementById('tab-content');
+                        let allCarouselsHtml = '';
+                        
+                        // Generamos los carruseles usando los datos de PLACES_DATA
+                        for (const key in PLACES_DATA) {
+                            allCarouselsHtml += createCarousel(`tab-${key}`, PLACES_DATA[key]);
+                        }
+                        tabContent.innerHTML = allCarouselsHtml;
+                        
+                        // Inicializa la primera pestaña
+                        window.switchTab('cultura');
+                        
+                        // Inicializa el modo oscuro al cargar la página
+                        checkInitialDarkMode();
+                    });
+
+                    /**
+                     * Cambia el contenido visible basado en la pestaña seleccionada.
+                     * @param {string} tabName El nombre de la pestaña (ej: 'cultura').
+                     */
+                    window.switchTab = (tabName) => {
+                        const panes = document.querySelectorAll('.tab-pane');
+                        const buttons = document.querySelectorAll('.tab-btn');
+                        
+                        // Oculta todos los paneles
+                        panes.forEach(pane => pane.classList.add('hidden'));
+                        
+                        // Desactiva todos los botones
+                        buttons.forEach(btn => {
+                            // Remueve clases de activo para claro y oscuro
+                            btn.classList.remove('text-orange-800', 'border-orange-600', 'dark:text-orange-400', 'dark:border-orange-400', 'border-b-2');
+                            // Añade clases de inactivo para claro y oscuro
+                            btn.classList.add('text-gray-600', 'border-transparent', 'dark:text-gray-400', 'dark:hover:text-orange-400', 'dark:hover:border-orange-500');
+                        });
+
+                        // Muestra el panel seleccionado
+                        const activePane = document.getElementById(`tab-${tabName}`);
+                        if (activePane) {
+                            activePane.classList.remove('hidden');
+                        }
+
+                        // Activa el botón seleccionado
+                        const activeBtn = document.getElementById(`btn-${tabName}`);
+                        if (activeBtn) {
+                            // Clases de activo para claro y oscuro
+                            activeBtn.classList.add('text-orange-800', 'border-orange-600', 'dark:text-orange-400', 'dark:border-orange-400', 'border-b-2');
+                            activeBtn.classList.remove('text-gray-600', 'border-transparent', 'dark:text-gray-400');
+                        }
+                    };
+                    
+                    /* --- LÓGICA DEL MODO OSCURO (Dark Mode) --- */
+                    
+                    /**
+                     * Aplica la clase 'dark' al elemento <html>.
+                     * @param {boolean} isDark Si el modo oscuro está activo.
+                     */
+                    const applyDarkMode = (isDark) => {
+                        const html = document.documentElement;
+                        const toggle = document.getElementById('dark-mode-toggle');
+                        
+                        if (isDark) {
+                            html.classList.add('dark');
+                            if (toggle) toggle.checked = true;
+                        } else {
+                            html.classList.remove('dark');
+                            if (toggle) toggle.checked = false;
+                        }
+                        // Actualizamos el estado del botón activo de la pestaña actual
+                        const activeTab = document.querySelector('.tab-btn.border-b-2');
+                        if (activeTab) {
+                           switchTab(activeTab.id.replace('btn-', ''));
+                        }
+                    };
+
+                    /**
+                     * Alterna entre modo oscuro y claro al hacer clic en el switch.
+                     */
+                    window.toggleDarkMode = () => {
+                        const html = document.documentElement;
+                        // El nuevo estado será el opuesto al actual
+                        const isDark = !html.classList.contains('dark');
+                        
+                        applyDarkMode(isDark);
+                        
+                        // Guardar la preferencia del usuario
+                        localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+                    };
+
+                    /**
+                     * Verifica la preferencia inicial del usuario.
+                     */
+                    const checkInitialDarkMode = () => {
+                        const storedTheme = localStorage.getItem('color-theme');
+                        
+                        if (storedTheme) {
+                            // Si hay una preferencia guardada
+                            applyDarkMode(storedTheme === 'dark');
+                        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                            // Si el sistema operativo prefiere el modo oscuro
+                            applyDarkMode(true);
+                        } else {
+                            // Por defecto: modo claro
+                            applyDarkMode(false);
+                        }
+                    };
+                    
+                    /* --- FIN LÓGICA DEL MODO OSCURO --- */
+
+
+                    // --- Configuración de Firebase (Obligatorio para futura persistencia) ---
+                    // IMPORTANTE: Dejamos las variables globales para el uso en el módulo.
+                    let app, db, auth, userId = null;
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                    // Función de inicialización asíncrona de Firebase
+                    async function initializeFirebase() {
+                        try {
+                            // Carga dinámica de módulos de Firebase (solo si la configuración existe)
+                            if (firebaseConfig) {
+                                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                                const { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                                const { getFirestore } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                                
+                                app = initializeApp(firebaseConfig);
+                                db = getFirestore(app);
+                                auth = getAuth(app);
+
+                                onAuthStateChanged(auth, async (user) => {
+                                    if (user) {
+                                        userId = user.uid;
+                                        console.log("Usuario autenticado. UID:", userId);
+                                    } else {
+                                        try {
+                                            if (initialAuthToken) {
+                                                await signInWithCustomToken(auth, initialAuthToken);
+                                            } else {
+                                                await signInAnonymously(auth);
+                                            }
+                                        } catch (error) {
+                                            console.error("Error al iniciar sesión:", error);
+                                        }
+                                    }
+                                });
+                            } else {
+                                console.warn("Firebase Configuración no encontrada. La persistencia de datos estará deshabilitada.");
+                            }
+                        } catch (e) {
+                            console.error("Error al cargar módulos de Firebase:", e);
+                        }
+                    }
+
+                    initializeFirebase();
+                    // --- Fin Configuración de Firebase ---
+
+                </script>
+                
+            </div>
+            
+        </section>
+        <!-- FIN SECCIÓN DE LUGARES -->
+
+        <!-- SECCIÓN DE PERSONAS DE NOTORIEDAD -->
+        <section id="notoriedad" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 transition-colors duration-300">Personas de Notoriedad</h2>
+
+            <!-- Persona 1: Estructura flexible y responsiva -->
+            <div class="flex flex-col md:flex-row gap-6 mb-8 p-4 bg-gray-100 dark:bg-gray-700 rounded-xl shadow-inner border border-gray-200 dark:border-gray-600 transition-colors duration-300">
+                <!-- Imagen (Vertical, se adapta al tamaño del bloque) -->
+                <div class="flex-shrink-0 w-full md:w-1/3 lg:w-48 mx-auto md:mx-0">
+                    <img 
+                        src="imagenes/sandra.png" 
+                        alt="Placeholder para Persona de Notoriedad 1" 
+                        class="w-full h-auto object-cover rounded-lg shadow-lg border border-orange-300 dark:border-orange-500"
+                    >
+                </div>
+                <!-- Texto Descriptivo -->
+                <div class="flex-grow">
+                    <h3 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3 transition-colors duration-300">Sandra Aguilar</h3>
+                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed transition-colors duration-300">
+                        Sandra Aguilar Navarro (Madrid, 9 de agosto de 1992) es una gimnasta rítmica española, subcampeona olímpica en los Juegos Olímpicos de Río 2016, bicampeona del mundo de 10 mazas (Kiev 2013 y Esmirna 2014) y 4.ª en los Juegos Olímpicos de Londres 2012 con el conjunto español. En Stuttgart 2015 lograron el bronce mundial en el concurso general, siendo la primera medalla española en la general de un Campeonato del Mundo desde 1998. La plata en Río 2016 fue la primera medalla olímpica para la gimnasia rítmica española desde Atlanta 1996, y la logró junto a Artemi Gavezou, Elena López, Lourdes Mohedano y Alejandra Quereda, conjunto conocido como el Equipaso. 
+                    </p>
+                </div>
+            </div>
+
+            <!-- Persona 2: Estructura flexible y responsiva -->
+            <div class="flex flex-col md:flex-row gap-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-xl shadow-inner border border-gray-200 dark:border-gray-600 transition-colors duration-300">
+                <!-- Imagen (Vertical, se adapta al tamaño del bloque) -->
+                <div class="flex-shrink-0 w-full md:w-1/3 lg:w-48 mx-auto md:mx-0">
+                    <img 
+                        src="imagenes/contador.jpg" 
+                        alt="Placeholder para Persona de Notoriedad 2" 
+                        class="w-full h-auto object-cover rounded-lg shadow-lg border border-indigo-300 dark:border-indigo-500"
+                    >
+                </div>
+                <!-- Texto Descriptivo -->
+                <div class="flex-grow">
+                    <h3 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3 transition-colors duration-300">Alberto Contador</h3>
+                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed transition-colors duration-300">
+                        Alberto Contador Velasco​(Madrid, España, 6 de diciembre de 1982)​ es un exciclista español. En su carrera compitió en los equipos ONCE/Liberty Seguros, Discovery Channel, Astana, Saxo Bank Sungard/Tinkoff y Trek-Segafredo, siendo profesional desde 2003 hasta 2017. Actualmente es comentarista deportivo en Eurosport. Catalogado de leyenda, es considerado como uno de los grandes vueltómanos de la historia del ciclismo, como uno de los mejores ciclistas españoles y uno de los mejores deportistas de la historia del país.​ Destacaba como escalador, terreno donde era un especialista, y como contrarrelojista, modalidad en la que, sin ser un especialista, demostró defenderse bastante bien, consiguiendo 9 victorias de etapa, un cuarto puesto en la contrarreloj de los Juegos Olímpicos de Pekín 2008 y el Campeonato de España de Ciclismo en Ruta de Contrarreloj de 2009.
+                    </p>
+                </div>
+            </div>
+        </section>
+        <!-- FIN SECCIÓN DE PERSONAS DE NOTORIEDAD -->
+        
+        <!-- VENTANA MODAL (Overlay) -->
+        <div id="place-modal" class="modal-overlay" onclick="hideModal()">
+            <div 
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-11/12 max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 transform transition-all duration-300"
+                onclick="event.stopPropagation()"
+            >
+                <div class="flex justify-between items-start mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">
+                    <h2 id="modal-title" class="text-3xl font-bold text-orange-700 dark:text-orange-400">Título del Lugar</h2>
+                    <button 
+                        onclick="hideModal()"
+                        class="text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors duration-150 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        aria-label="Cerrar"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <img 
+                    id="modal-image" 
+                    src="https://placehold.co/800x600/0E7490/FFFFFF?text=LUGAR" 
+                    alt="Imagen de detalle del lugar" 
+                    class="w-full h-auto object-cover rounded-lg mb-6 border border-gray-200 dark:border-gray-700"
+                >
+
+                <p id="modal-description" class="text-gray-700 dark:text-gray-300 text-base leading-relaxed">
+                    Este es el texto de descripción del lugar. Aquí podrás añadir información detallada, horarios, historia o cualquier dato relevante sobre la Torre de Éboli o el lugar seleccionado. Actualmente es un placeholder.
+                </p>
+                
+                <div class="mt-6 text-right">
+                    <button 
+                        onclick="hideModal()"
+                        class="px-5 py-2 bg-orange-600 dark:bg-orange-500 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 dark:hover:bg-orange-600 transition-colors duration-200"
+                    >
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN VENTANA MODAL -->
+    </div>
+	
+	<!-- Modal para mostrar detalles del lugar -->
+	<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+	  <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-11/12 md:w-2/3 lg:w-1/2 shadow-lg relative">
+		
+		<!-- Imagen del modal -->
+		<img id="modal-image" src="" alt="" class="w-full h-64 object-cover rounded-lg mb-4">
+
+		<!-- Contenido del modal -->
+		<h2 id="modal-title" class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"></h2>
+		<p id="modal-category" class="text-sm text-gray-500 dark:text-gray-400 mb-4"></p>
+		<p id="modal-description" class="text-gray-700 dark:text-gray-300"></p>
+		
+		<!-- Botón de cierre -->
+		<button 
+		  onclick="closeModal()" 
+		  class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+		>
+		  ✕
+		</button>
+	  </div>
+	</div>
+
+</body>
+</html>

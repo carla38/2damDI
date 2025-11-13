@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinto-Eventos</title>
+    <!-- Carga de Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuración de la fuente Inter por defecto */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el carrusel: permite el scroll horizontal con arrastre */
+        .carousel-container::-webkit-scrollbar {
+            display: none; /* Oculta la barra de scroll en Chrome/Safari */
+        }
+        .carousel-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+            scroll-behavior: smooth; /* Permite un scroll suave al usar las flechas */
+        }
+        /* Estilo base de la flecha (botón) */
+        .carousel-arrow {
+            /* Flex-shrink-0 es crucial para que el botón no se encoja */
+            flex-shrink: 0; 
+            z-index: 10;
+        }
+
+        /* Estilo para la Modal (siempre oculta por defecto) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none; /* Oculto por defecto */
+            justify-content: center;
+            align-items: center;
+            z-index: 50; /* Z-index alto para estar sobre todo */
+            /* En modo oscuro, el fondo es más sutil */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* Estilo para forzar la visibilidad (se usa con JS) */
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        /* Estilos del Switch (Toggle) */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6; /* blue-500 */
+        }
+    </style>
+    <!-- Configura Tailwind para usar la estrategia de clase para el modo oscuro -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Usa la clase 'dark' en el elemento raíz (<html>)
+        }
+    </script>
+</head>
+<!--
+    El elemento <html> debe ser donde se aplica la clase 'dark'. 
+    Esto se maneja mediante JS en la carga inicial.
+-->
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-start justify-center p-4 sm:p-8 transition-colors duration-300">
+
+    <!-- Switch de Modo Oscuro/Claro (Posicionado Fijo) -->
+    <div class="fixed top-4 left-4 z-40">
+        <div class="flex items-center space-x-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border dark:border-gray-700 transition-colors duration-300">
+            <!-- Icono del Sol (Modo Claro) -->
+            <svg id="icon-sun" class="h-6 w-6 text-yellow-500 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            
+            <!-- Toggle Switch -->
+            <label for="dark-mode-toggle" class="relative inline-block w-12 h-6 cursor-pointer">
+                <input type="checkbox" id="dark-mode-toggle" class="toggle-checkbox absolute opacity-0 w-0 h-0" onclick="toggleDarkMode()">
+                <!-- Fondo del switch -->
+                <span class="toggle-label bg-gray-300 dark:bg-gray-700 absolute inset-0 rounded-full transition-colors duration-300"></span>
+                <!-- Círculo que se mueve -->
+                <span class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 ease-in-out dark:translate-x-6 dark:bg-gray-200"></span>
+            </label>
+
+            <!-- Icono de la Luna (Modo Oscuro) -->
+            <svg id="icon-moon" class="h-6 w-6 text-gray-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+        </div>
+    </div>
+    <!-- Fin del Switch -->
+
+
+    <div class="w-full max-w-4xl bg-white dark:bg-gray-800 shadow-xl dark:shadow-2xl dark:shadow-orange-900/50 rounded-2xl p-6 sm:p-10 mt-8 transition-colors duration-300">
+        
+        <!-- Contenedor del Título y el Botón de Eventos -->
+        <div class="flex justify-between items-center mb-6 border-b-4 border-orange-400 dark:border-orange-600 pb-2">
+            <!-- Título principal -->
+            <h1 class="text-5xl sm:text-6xl font-extrabold text-orange-600 dark:text-orange-500 transition-colors duration-300 leading-tight">
+                Eventos
+            </h1>
+            
+            <!-- Botón de Eventos -->
+			<a href="GuiaPueblo-Index.html">
+				<button
+					onclick="openEvents()"
+					class="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-orange-300 dark:focus:ring-orange-700"
+					aria-label="Abrir sección de Eventos"
+				>
+					<!-- Icono de Agenda -->
+					<span class="hidden sm:inline">Inicio</span>
+					<span class="sm:hidden">Inicio</span>
+				</button>
+			</a>
+        </div>
+        
+        <!-- Contenedor del párrafo de información (Introducción) -->
+        <section id="introduccion" class="space-y-6 text-gray-700 dark:text-gray-300 leading-relaxed mb-10 transition-colors duration-300">
+            <!-- Párrafo de demostración con información del pueblo -->
+            <p class="text-lg sm:text-xl font-medium">
+				En esta sección podrás comprobar todos los eventos y actividades que se organizarán próximamente en el municipio y aquello planeados para los años 2025-2026.
+            </p>
+        </section>
+
+        <!-- SECCIÓN DE LUGARES Y NAVEGACIÓN POR PESTAÑAS -->
+        <section id="lugares" class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 transition-colors duration-300">Eventos próximos</h2>
+
+			<!-- Contenedor del contenido de las pestañas -->
+            <div id="tab-content">
+                
+                <script>
+                    
+                    // =====================================================================
+                    // AÑADE AQUÍ LA PROPIEDAD 'imageUrl' CON LA URL ESPECÍFICA PARA CADA LUGAR
+                    // =====================================================================
+                    const PLACES_DATA = {
+                        'cultura': [
+                            { 
+                                title: "Feria de Otoño", 
+                                category: "Cultura", 
+								description: "Empezando por 'Los paisajes del otoño', una actividad organizada por el Ayuntamiento de Pinto, a través del área de Turismo que dirige Víctor Alonso, los días 8, 15 y 22 de noviembre. Para toda la familia, hablaremos de la caída de las hojas, los colores, la luz. De los parques de nuestra ciudad, su antes y después. Un taller didáctico donde también se cuelan hadas, leyendas y duendes en dos pases, a las 11:00 y a las 12:30 horas. La reserva de plazas estará disponible el lunes 3 de noviembre, a las 9:00 horas. Asimismo, durante el mes de noviembre, continúa abierto el plazo para solicitar espacio municipal donde los artistas locales pueden exponer sus obras. Exposiciones, como 'La verdadera herencia', de Javier Castro Morenas, que se inaugura el 7 de noviembre en la Biblioteca Javier Lapeña. Por otro lado, durante novieembre, se podrá seguir visitando el patrimonio monumental de Pinto, cuya reserva de entradas se puede realizar a través de la Plataforma Municipal.",
+                                // URL ÚNICA DE LA TORRE DE ÉBOLI: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/egido2.jpg" 
+                            },
+                            { 
+                                title: "Mercado de Navidad", 
+                                category: "Cultura", 
+								description: "El Mercado Fantasía se instalará los días 12, 13, 14 y 15 de diciembre en la Avenida de España. Los días sábado 14 y domingo 15  habrá tren de paseos gratuito todo público. Durante los días y horarios de mercado habrá demostración de oficios (piedra, tallado madera, soplado vidrio), atracciones infantiles, ludoteca gratuita de mesas de juegos, puestos de artesanos, mercaderes y pasacalles de animación de personajes y dinosaurios aparte de los horarios ya estipulados en el programa de actividades. También Photocall navideño y trono de papa Noel todos los días.",
+								// URL ÚNICA DEL TEATRO MUNICIPAL: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/mercadonavidad1.jpg" 
+                            },
+							{ 
+                                title: "Mercado Infantil de Navidad", 
+                                category: "Cultura", 
+								description: "Pinto celebra la primera edición del Mercado Navideño Infantil que se desarrollará el 21 de diciembre en Parque Gabriel Martín (Villa de la Navidad), en horario de 12:00 a 15:00 y de 17:00 a 20:00. Ofrece esta actividad con el objetivo de fomentar el intercambio y la reutilización de objetos de segunda mano, enfocado también a que los pequeños de la localidad ofrezcan sus productos artesanos y manualidades elaboradas por ellos mismos. Las inscripciones estarán abiertas hasta el 15 de diciembre. Hay 25 carpas disponibles. En caso de producirse más inscripciones que espacio disponible, se procederá a un sorteo público, del cual se informará a los interesados.",
+                                // URL ÚNICA DEL TEATRO MUNICIPAL: Reemplazar el PLACEHOLDER por la URL real
+                                imageUrl: "imagenes/mercadonavidad2.jpg" 
+                            },
+                        ],
+                    };
+
+                    /**
+                     * Genera el HTML para una tarjeta de lugar.
+                     * @param {Object} place Objeto con la información del lugar.
+                     * @param {number} index Índice del lugar en su categoría.
+                     */
+                    const createCard = (place, index) => `
+						<div 
+							class="flex-shrink-0 w-64 md:w-72 lg:w-80 p-3 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 snap-start cursor-pointer"
+							onclick="showPlaceDetails('${place.title}', '${place.category}', '${place.description.replace(/'/g, "\\'")}', '${place.imageUrl ? place.imageUrl : `https://placehold.co/400x300/a8b9f1/1F2937?text=${encodeURIComponent(place.category.toUpperCase())}`}')"
+						>
+							<img 
+								src="${place.imageUrl ? place.imageUrl : `https://placehold.co/400x300/a8b9f1/1F2937?text=${encodeURIComponent(place.category.toUpperCase())}`}" 
+								alt="Imagen de ${place.title}" 
+								class="w-full h-40 object-cover rounded-lg mb-4"
+							>
+							<h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">${place.title}</h3>
+						</div>
+					`;
+
+                    
+                    /**
+                     * Genera el HTML para el carrusel de una categoría, incluyendo las flechas.
+                     * @param {string} categoryId El ID del contenedor de la pestaña (ej: 'tab-cultura').
+                     * @param {Array<Object>} places Array de objetos con la información de los lugares.
+                     */
+                    const createCarousel = (categoryId, places) => {
+                        const cardsHtml = places.map((place, index) => createCard(place, index)).join('');
+                        
+                        return `
+                            <div id="${categoryId}" class="tab-pane hidden">
+                                <div class="relative flex items-center">
+                                    
+                                    <!-- Flecha Izquierda (Oculta en móviles) -->
+                                    <button 
+                                        onclick="scrollCarousel('${categoryId}-carousel', -250)"
+                                        class="carousel-arrow hidden sm:block absolute -left-4 z-20 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-105 focus:outline-none"
+                                        aria-label="Anterior"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+
+                                    <!-- Contenedor del Carrusel Scrollable -->
+                                    <div id="${categoryId}-carousel" class="carousel-container flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 w-full px-1">
+                                        ${cardsHtml}
+                                    </div>
+                                    
+                                    <!-- Flecha Derecha (Oculta en móviles) -->
+                                    <button 
+                                        onclick="scrollCarousel('${categoryId}-carousel', 250)"
+                                        class="carousel-arrow hidden sm:block absolute -right-4 z-20 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-gray-700 transition-colors duration-200 transform hover:scale-105 focus:outline-none"
+                                        aria-label="Siguiente"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+
+                                </div>
+                            </div>
+                        `;
+                    };
+                    
+                    /**
+                     * Desplaza el carrusel horizontalmente.
+                     * @param {string} containerId El ID del contenedor del carrusel.
+                     * @param {number} scrollAmount La cantidad de píxeles a desplazar (positivo para derecha, negativo para izquierda).
+                     */
+                    window.scrollCarousel = (containerId, scrollAmount) => {
+                        const container = document.getElementById(containerId);
+                        if (container) {
+                            container.scrollBy({
+                                left: scrollAmount,
+                                behavior: 'smooth'
+                            });
+                        }
+                    };
+
+                    /**
+                     * Muestra la ventana modal con la información detallada del lugar.
+                     * @param {string} title Título del lugar.
+                     * @param {string} category Categoría del lugar.
+                     * @param {string} description Descripción del lugar.
+                     */
+                   window.showPlaceDetails = (title, category, description, imageUrl) => {
+						const modal = document.getElementById('place-modal');
+						document.getElementById('modal-title').innerText = title;
+						document.getElementById('modal-description').innerText = description;
+						
+						// Mostrar la imagen real si existe, o un placeholder si no
+						document.getElementById('modal-image').src = imageUrl 
+							? imageUrl 
+							: `https://placehold.co/800x600/0E7490/FFFFFF?text=${encodeURIComponent(title.toUpperCase())}`;
+						document.getElementById('modal-image').alt = `Imagen de ${title}`;
+
+						modal.classList.add('active');
+						document.body.classList.add('overflow-hidden'); // Para evitar el scroll del fondo
+					};
+
+                    /**
+                     * Oculta la ventana modal.
+                     */
+                    window.hideModal = () => {
+                        document.getElementById('place-modal').classList.remove('active');
+                        document.body.classList.remove('overflow-hidden');
+                    };
+
+                    /**
+                     * Función placeholder para el botón de Eventos.
+                     * La funcionalidad se implementará más tarde.
+                     */
+                    window.openEvents = () => {
+                        console.log("¡Botón de Eventos pulsado! Implementar funcionalidad aquí.");
+                        // Por ejemplo: showEventsModal(); o window.location.hash = '#events';
+                    };
+
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const tabContent = document.getElementById('tab-content');
+                        let allCarouselsHtml = '';
+                        
+                        // Generamos los carruseles usando los datos de PLACES_DATA
+                        for (const key in PLACES_DATA) {
+                            allCarouselsHtml += createCarousel(`tab-${key}`, PLACES_DATA[key]);
+                        }
+                        tabContent.innerHTML = allCarouselsHtml;
+                        
+                        // Inicializa la primera pestaña
+                        window.switchTab('cultura');
+                        
+                        // Inicializa el modo oscuro al cargar la página
+                        checkInitialDarkMode();
+                    });
+
+                    /**
+                     * Cambia el contenido visible basado en la pestaña seleccionada.
+                     * @param {string} tabName El nombre de la pestaña (ej: 'cultura').
+                     */
+                    window.switchTab = (tabName) => {
+                        const panes = document.querySelectorAll('.tab-pane');
+                        const buttons = document.querySelectorAll('.tab-btn');
+                        
+                        // Oculta todos los paneles
+                        panes.forEach(pane => pane.classList.add('hidden'));
+                        
+                        // Desactiva todos los botones
+                        buttons.forEach(btn => {
+                            // Remueve clases de activo para claro y oscuro
+                            btn.classList.remove('text-orange-800', 'border-orange-600', 'dark:text-orange-400', 'dark:border-orange-400', 'border-b-2');
+                            // Añade clases de inactivo para claro y oscuro
+                            btn.classList.add('text-gray-600', 'border-transparent', 'dark:text-gray-400', 'dark:hover:text-orange-400', 'dark:hover:border-orange-500');
+                        });
+
+                        // Muestra el panel seleccionado
+                        const activePane = document.getElementById(`tab-${tabName}`);
+                        if (activePane) {
+                            activePane.classList.remove('hidden');
+                        }
+
+                        // Activa el botón seleccionado
+                        const activeBtn = document.getElementById(`btn-${tabName}`);
+                        if (activeBtn) {
+                            // Clases de activo para claro y oscuro
+                            activeBtn.classList.add('text-orange-800', 'border-orange-600', 'dark:text-orange-400', 'dark:border-orange-400', 'border-b-2');
+                            activeBtn.classList.remove('text-gray-600', 'border-transparent', 'dark:text-gray-400');
+                        }
+                    };
+                    
+                    /* --- LÓGICA DEL MODO OSCURO (Dark Mode) --- */
+                    
+                    /**
+                     * Aplica la clase 'dark' al elemento <html>.
+                     * @param {boolean} isDark Si el modo oscuro está activo.
+                     */
+                    const applyDarkMode = (isDark) => {
+                        const html = document.documentElement;
+                        const toggle = document.getElementById('dark-mode-toggle');
+                        
+                        if (isDark) {
+                            html.classList.add('dark');
+                            if (toggle) toggle.checked = true;
+                        } else {
+                            html.classList.remove('dark');
+                            if (toggle) toggle.checked = false;
+                        }
+                        // Actualizamos el estado del botón activo de la pestaña actual
+                        const activeTab = document.querySelector('.tab-btn.border-b-2');
+                        if (activeTab) {
+                           switchTab(activeTab.id.replace('btn-', ''));
+                        }
+                    };
+
+                    /**
+                     * Alterna entre modo oscuro y claro al hacer clic en el switch.
+                     */
+                    window.toggleDarkMode = () => {
+                        const html = document.documentElement;
+                        // El nuevo estado será el opuesto al actual
+                        const isDark = !html.classList.contains('dark');
+                        
+                        applyDarkMode(isDark);
+                        
+                        // Guardar la preferencia del usuario
+                        localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+                    };
+
+                    /**
+                     * Verifica la preferencia inicial del usuario.
+                     */
+                    const checkInitialDarkMode = () => {
+                        const storedTheme = localStorage.getItem('color-theme');
+                        
+                        if (storedTheme) {
+                            // Si hay una preferencia guardada
+                            applyDarkMode(storedTheme === 'dark');
+                        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                            // Si el sistema operativo prefiere el modo oscuro
+                            applyDarkMode(true);
+                        } else {
+                            // Por defecto: modo claro
+                            applyDarkMode(false);
+                        }
+                    };
+                    
+                    /* --- FIN LÓGICA DEL MODO OSCURO --- */
+
+
+                    // --- Configuración de Firebase (Obligatorio para futura persistencia) ---
+                    // IMPORTANTE: Dejamos las variables globales para el uso en el módulo.
+                    let app, db, auth, userId = null;
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                    // Función de inicialización asíncrona de Firebase
+                    async function initializeFirebase() {
+                        try {
+                            // Carga dinámica de módulos de Firebase (solo si la configuración existe)
+                            if (firebaseConfig) {
+                                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                                const { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                                const { getFirestore } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                                
+                                app = initializeApp(firebaseConfig);
+                                db = getFirestore(app);
+                                auth = getAuth(app);
+
+                                onAuthStateChanged(auth, async (user) => {
+                                    if (user) {
+                                        userId = user.uid;
+                                        console.log("Usuario autenticado. UID:", userId);
+                                    } else {
+                                        try {
+                                            if (initialAuthToken) {
+                                                await signInWithCustomToken(auth, initialAuthToken);
+                                            } else {
+                                                await signInAnonymously(auth);
+                                            }
+                                        } catch (error) {
+                                            console.error("Error al iniciar sesión:", error);
+                                        }
+                                    }
+                                });
+                            } else {
+                                console.warn("Firebase Configuración no encontrada. La persistencia de datos estará deshabilitada.");
+                            }
+                        } catch (e) {
+                            console.error("Error al cargar módulos de Firebase:", e);
+                        }
+                    }
+
+                    initializeFirebase();
+                    // --- Fin Configuración de Firebase ---
+
+                </script>
+                
+            </div>
+            
+        </section>
+        <!-- FIN SECCIÓN DE LUGARES -->
+		
+		<!-- SECCIÓN DEL CALENDARIO DE EVENTOS -->
+		<section id="calendario-eventos" class="mt-16 rounded-2xl shadow-inner bg-orange-50 dark:bg-gray-900/60 p-8 transition-colors duration-500">
+		  <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 border-b-4 border-orange-400 dark:border-orange-600 pb-2">
+			Calendario de eventos en Pinto
+		  </h2>
+
+		  <!-- Contenedor principal del calendario -->
+		  <div id="calendar-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+		</section>
+
+		<script>
+		  // ======= CONFIGURACIÓN DE EVENTOS =======
+		  const EVENTOS_PINTO = [
+			{ fecha: "2025-11-22", titulo: "Feria de Otoño", descripcion: "Mercado artesanal y gastronómico en el Parque Egido." },
+			{ fecha: "2025-12-15", titulo: "Concierto de Navidad", descripcion: "Orquesta local en el Teatro Francisco Rabal." },
+			{ fecha: "2025-12-31", titulo: "Fiesta de Fin de Año", descripcion: "Celebración en la Plaza de la Constitución." },
+			{ fecha: "2026-01-05", titulo: "Cabalgata de Reyes", descripcion: "Desfile tradicional por las calles de Pinto." },
+			{ fecha: "2026-03-19", titulo: "Fallas Infantiles", descripcion: "Evento cultural con talleres para niños." },
+			{ fecha: "2026-05-15", titulo: "Fiestas de San Isidro", descripcion: "Procesión, música y actividades en el centro." },
+			{ fecha: "2026-07-10", titulo: "Festival de Verano", descripcion: "Conciertos al aire libre en el Auditorio del Parque." },
+			{ fecha: "2026-09-08", titulo: "Fiestas Patronales de Pinto", descripcion: "Semana grande con fuegos artificiales y conciertos." },
+			{ fecha: "2026-12-20", titulo: "Mercadillo Navideño", descripcion: "Puestos de artesanía y dulces típicos." }
+		  ];
+
+		  // ======= FUNCIÓN PARA GENERAR CALENDARIO =======
+		  const generarCalendario = () => {
+			const contenedor = document.getElementById('calendar-container');
+			const fechaInicio = new Date("2025-11-01");
+			const fechaFin = new Date("2026-12-31");
+			const meses = [];
+
+			// Generar lista de meses
+			for (let f = new Date(fechaInicio); f <= fechaFin; f.setMonth(f.getMonth() + 1)) {
+			  meses.push(new Date(f));
+			}
+
+			// Crear tarjetas mensuales
+			contenedor.innerHTML = meses.map(m => {
+			  const año = m.getFullYear();
+			  const mesNombre = m.toLocaleString('es-ES', { month: 'long' });
+			  const eventosDelMes = EVENTOS_PINTO.filter(e => new Date(e.fecha).getMonth() === m.getMonth() && new Date(e.fecha).getFullYear() === año);
+
+			  return `
+				<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border border-gray-100 dark:border-gray-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+				  <h3 class="text-xl font-bold text-orange-700 dark:text-orange-400 mb-3 capitalize">${mesNombre} ${año}</h3>
+				  ${eventosDelMes.length > 0
+					? `<ul class="space-y-2">
+						${eventosDelMes.map(ev => `
+						  <li class="p-3 bg-orange-100/70 dark:bg-gray-900 rounded-lg border-l-4 border-orange-400 dark:border-orange-600">
+							<p class="font-semibold text-gray-800 dark:text-gray-100">${new Date(ev.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}: ${ev.titulo}</p>
+							<p class="text-sm text-gray-600 dark:text-gray-300">${ev.descripcion}</p>
+						  </li>`).join('')}
+					  </ul>`
+					: `<p class="text-gray-500 dark:text-gray-400 italic">No hay eventos registrados.</p>`
+				  }
+				</div>
+			  `;
+			}).join('');
+		  };
+
+		  document.addEventListener('DOMContentLoaded', generarCalendario);
+		</script>
+
+
+        
+        <!-- VENTANA MODAL (Overlay) -->
+        <div id="place-modal" class="modal-overlay" onclick="hideModal()">
+            <div 
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-11/12 max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 transform transition-all duration-300"
+                onclick="event.stopPropagation()"
+            >
+                <div class="flex justify-between items-start mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">
+                    <h2 id="modal-title" class="text-3xl font-bold text-orange-700 dark:text-orange-400">Título del Lugar</h2>
+                    <button 
+                        onclick="hideModal()"
+                        class="text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors duration-150 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        aria-label="Cerrar"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <img 
+                    id="modal-image" 
+                    src="https://placehold.co/800x600/0E7490/FFFFFF?text=LUGAR" 
+                    alt="Imagen de detalle del lugar" 
+                    class="w-full h-auto object-cover rounded-lg mb-6 border border-gray-200 dark:border-gray-700"
+                >
+
+                <p id="modal-description" class="text-gray-700 dark:text-gray-300 text-base leading-relaxed">
+                    Este es el texto de descripción del lugar. Aquí podrás añadir información detallada, horarios, historia o cualquier dato relevante sobre la Torre de Éboli o el lugar seleccionado. Actualmente es un placeholder.
+                </p>
+                
+                <div class="mt-6 text-right">
+                    <button 
+                        onclick="hideModal()"
+                        class="px-5 py-2 bg-orange-600 dark:bg-orange-500 text-white font-semibold rounded-lg shadow-md hover:bg-orange-700 dark:hover:bg-orange-600 transition-colors duration-200"
+                    >
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- FIN VENTANA MODAL -->
+    </div>
+	
+	<!-- Modal para mostrar detalles del lugar -->
+	<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+	  <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-11/12 md:w-2/3 lg:w-1/2 shadow-lg relative">
+		
+		<!-- Imagen del modal -->
+		<img id="modal-image" src="" alt="" class="w-full h-64 object-cover rounded-lg mb-4">
+
+		<!-- Contenido del modal -->
+		<h2 id="modal-title" class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2"></h2>
+		<p id="modal-category" class="text-sm text-gray-500 dark:text-gray-400 mb-4"></p>
+		<p id="modal-description" class="text-gray-700 dark:text-gray-300"></p>
+		
+		<!-- Botón de cierre -->
+		<button 
+		  onclick="closeModal()" 
+		  class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+		>
+		  ✕
+		</button>
+	  </div>
+	</div>
+
+</body>
+</html>
