@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor y Editor de Documentos - Pro</title>
+    <!-- Incluye Tailwind CSS para el estilizado -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Colores para el tema Oscuro/Minimalista y Profesional
+                        'bg-default': '#111827', // Fondo principal oscuro (Deep Slate)
+                        'card-default': '#1f2937', // Fondo de tarjetas/elementos (Dark Gray Blue)
+                        'text-default': '#f9fafb', // Texto principal claro
+                        'text-subtle': '#9ca3af', // Texto secundario sutil
+                        'primary': '#3b82f6', // Azul primario (para acentos)
+                        'primary-hover': '#60a5fa', // Azul de hover
+                        'success': '#10b981', // Verde para éxito
+                        'success-hover': '#34d399',
+                        'danger': '#ef4444', // Rojo para peligro/cerrar
+                        'danger-hover': '#f87171',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos generales para el editor y la visualización */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s;
+            overflow-x: hidden; 
+        }
+        
+        #top-bar {
+            width: 100%;
+        }
+        
+        #editor-toolbar {
+            flex-wrap: wrap; 
+        }
+        
+        .editor-container {
+            min-height: calc(100vh - 12rem);
+            max-width: 1280px; 
+            margin: 0 auto;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .content-area {
+            min-height: 500px;
+            padding: 20px;
+            line-height: 1.6;
+            overflow-y: auto;
+            word-break: break-word;
+            white-space: pre-wrap; 
+        }
+        
+        /* 2. ESTILO PARA EL TÍTULO EDITABLE PERMANENTE */
+        #file-title {
+            padding: 2px 4px; 
+            border-radius: 4px;
+            cursor: text;
+        }
+        #file-title:hover {
+            background-color: #374151; 
+        }
+        #file-title:focus {
+            outline: 2px solid var(--tw-colors-primary);
+            background-color: #374151; 
+        }
+
+        /* Estilo para la paleta de colores del editor */
+        .color-picker-btn {
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid #374151; 
+            overflow: hidden;
+            display: inline-block;
+        }
+        .color-picker-btn::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker-btn::-webkit-color-swatch {
+            border: none;
+        }
+        
+        /* Estilos para la impresión/PDF */
+        @media print {
+            header, .fixed, #document-view button, .editor-toolbar, #save-btn {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+            }
+            .content-area, .editor-container {
+                min-height: auto !important;
+                box-shadow: none !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-bg-default text-text-default transition-colors duration-300">
+
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app-container">
+        
+        <!-- Barra de Opciones Superior (se muestra tras abrir/crear un archivo) -->
+        <header id="top-bar" class="hidden sticky top-0 z-10 p-4 border-b border-gray-700 bg-card-default shadow-xl">
+            <div class="flex items-center justify-between max-w-7xl mx-auto space-x-4">
+                
+                <!-- TÍTULO EDITABLE PERMANENTE -->
+                <div 
+                    id="file-title" 
+                    contenteditable="true"
+                    spellcheck="false"
+                    class="text-xl font-light max-w-xs sm:max-w-md focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-1 transition duration-150 ease-in-out cursor-text"
+                    title="Haz clic para editar el nombre del archivo"
+                    onblur="updateFileName(this.textContent)"
+                    onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
+                </div>
+
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 flex-shrink-0">
+                    <!-- Botón de Edición/Visualización -->
+                    <button id="toggle-edit-btn" onclick="toggleEditMode()" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors duration-200 text-sm font-medium shadow-md">
+                        Editar
+                    </button>
+                    <!-- Botón de Guardar -->
+                    <button id="save-btn" onclick="triggerSaveFlow()" class="px-4 py-2 rounded-xl bg-success text-white hover:bg-success-hover transition-colors duration-200 text-sm font-medium shadow-md">
+                        Guardar
+                    </button>
+                    <!-- Botón para volver al Inicio/Cerrar archivo -->
+                    <button onclick="resetApp('confirm')" class="px-4 py-2 rounded-xl bg-gray-600 text-text-default hover:bg-gray-700 transition-colors duration-200 text-sm font-medium shadow-md">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Barra de Herramientas de Edición (FLEX WRAP: Se ajusta para no desbordar) -->
+            <div id="editor-toolbar" class="hidden mt-4 flex flex-wrap gap-2 p-3 rounded-xl bg-card-default border border-gray-700 max-w-7xl mx-auto">
+                <select onchange="applyFormatBlock('formatBlock', this.value); this.value=''" class="p-2 rounded bg-gray-700 border border-gray-600 text-text-default text-sm">
+                    <option value="" disabled selected>Formato</option>
+                    <option value="p">Párrafo</option>
+                    <option value="h1">Título 1</option>
+                    <option value="h2">Título 2</option>
+                    <option value="h3">Título 3</option>
+                </select>
+                <select onchange="applyFormatBlock('fontName', this.value); this.value=''" class="p-2 rounded bg-gray-700 border border-gray-600 text-text-default text-sm">
+                    <option value="" disabled selected>Fuente</option>
+                    <option value="Inter, sans-serif">Inter</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                </select>
+                <select onchange="applyFormatBlock('fontSize', this.value); this.value=''" class="p-2 rounded bg-gray-700 border border-gray-600 text-text-default text-sm">
+                    <option value="" disabled selected>Tamaño</option>
+                    <option value="1">8px</option>
+                    <option value="2">10px</option>
+                    <option value="3">12px</option>
+                    <option value="4">14px</option>
+                    <option value="5">18px</option>
+                    <option value="6">24px</option>
+                    <option value="7">32px</option>
+                </select>
+                <input type="color" onchange="applyFormatBlock('foreColor', this.value)" title="Color de Texto" class="color-picker-btn w-8 h-8 rounded-md cursor-pointer border-0 p-0">
+                <button onclick="document.execCommand('bold', false, null)" class="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors text-sm font-bold">B</button>
+                <button onclick="document.execCommand('italic', false, null)" class="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors text-sm italic">I</button>
+                <button onclick="document.execCommand('underline', false, null)" class="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors text-sm underline">U</button>
+                <button onclick="document.execCommand('insertUnorderedList', false, null)" class="p-2 rounded bg-gray-700 hover:bg-gray-600 transition-colors text-sm">Lista</button>
+            </div>
+        </header>
+
+        <!-- Contenedor Principal de Contenido -->
+        <main class="p-4 max-w-full mx-auto"> 
+            
+            <!-- Barra de Configuración Global (Esquina Superior Izquierda) -->
+            <div class="fixed top-4 left-4 z-20 flex space-x-2">
+                <!-- Botón de Biblioteca (MANTENIDO) -->
+                <button onclick="showLibraryModal()" class="p-3 rounded-full bg-card-default text-text-default shadow-lg hover:ring-2 ring-primary transition-all duration-300" title="Biblioteca de Archivos">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M5 3h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"></path></svg>
+                </button>
+            </div>
+
+            <!-- Pantalla de Inicio -->
+            <div id="home-screen" class="flex flex-col items-center justify-center min-h-screen text-center">
+                <h1 class="text-5xl font-extralight mb-8 text-white">Gestor de Documentos <span class="font-bold text-primary">Pro</span></h1>
+                <p class="text-xl mb-12 text-text-subtle">Herramientas de edición y gestión de archivos en un solo lugar.</p>
+                <div class="flex flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-10">
+                    <button onclick="openFilePicker()" class="p-8 rounded-2xl bg-card-default text-text-default hover:bg-gray-700 transition-transform transform hover:scale-105 shadow-2xl w-72 border border-gray-700">
+                        <svg class="w-8 h-8 mx-auto mb-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1m-3 1H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2v-2a2 2 0 00-2-2h-8m0 0l-3-3m0 0l-3 3"></path></svg>
+                        <span class="font-semibold text-xl">Abrir Archivo</span>
+                        <p class="text-sm text-text-subtle mt-1">Sube un archivo de tu ordenador (.txt, .md, .pdf, etc.)</p>
+                    </button>
+                    <button onclick="createNewDocument()" class="p-8 rounded-2xl bg-primary text-white hover:bg-primary-hover transition-transform transform hover:scale-105 shadow-2xl w-72">
+                        <svg class="w-8 h-8 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="font-semibold text-xl">Crear Archivo</span>
+                        <p class="text-sm opacity-80 mt-1">Empieza un documento desde cero con herramientas de edición.</p>
+                    </button>
+                </div>
+                <p id="auth-status" class="mt-12 text-sm text-text-subtle">Cargando...</p>
+            </div>
+
+            <!-- Input de Archivos Oculto -->
+            <input type="file" id="file-input" style="display: none;" accept=".txt,.md,.json,.pdf,.html,.css,.js" />
+
+            <!-- Área de Visualización/Edición de Documentos -->
+            <div id="document-view" class="hidden">
+                <div id="pdf-viewer-container" class="hidden">
+                    <!-- El PDF se cargará aquí -->
+                </div>
+                <!-- Área principal para texto, markdown, json, etc. -->
+                <div id="text-editor-container" class="editor-container bg-card-default rounded-xl shadow-2xl p-0 transition-colors duration-300 border border-gray-700">
+                    <div id="content-display" class="editable-content content-area" contenteditable="false"></div>
+                </div>
+            </div>
+
+            <!-- Modales y Mensajes -->
+
+            <!-- Modal de Alerta/Confirmación -->
+            <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden p-4">
+                <div class="bg-card-default rounded-xl shadow-2xl p-6 w-full max-w-sm transform transition-all duration-300 scale-95 opacity-0 border border-gray-700" id="modal-content-area">
+                    <h3 class="text-xl font-medium mb-4" id="modal-title"></h3>
+                    <p id="modal-message" class="mb-6 text-text-subtle"></p>
+                    <div id="modal-actions" class="flex justify-end space-x-3">
+                        <button id="modal-cancel-btn" onclick="hideModal()" class="px-4 py-2 rounded-xl bg-gray-600 text-text-default hover:bg-gray-700 transition-colors">Cancelar</button>
+                        <!-- Botón Secundario: Salir sin Guardar -->
+                        <button id="modal-secondary-btn" onclick="handleModalSecondary()" class="px-4 py-2 rounded-xl bg-danger text-white hover:bg-danger-hover transition-colors hidden">Salir sin Guardar</button>
+                        <button id="modal-confirm-btn" onclick="handleModalConfirm()" class="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Guardar Como (AUMENTADO A MAX-W-XL) -->
+            <div id="save-as-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden p-4">
+                <div class="bg-card-default rounded-xl shadow-2xl p-6 w-full max-w-xl transform transition-all duration-300 scale-95 opacity-0 border border-gray-700" id="save-as-modal-content">
+                    <h3 class="text-xl font-medium mb-4">Guardar Archivo</h3>
+                    <p class="mb-4 text-sm text-text-subtle">Introduce el nombre y selecciona la extensión para tu archivo.</p>
+                    
+                    <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-6">
+                        <!-- Input de Nombre (ocupa casi todo el espacio) -->
+                        <input type="text" id="file-name-input" placeholder="Mi Documento" class="w-full sm:flex-1 p-2 rounded-xl border border-gray-600 bg-gray-700 focus:ring-primary focus:border-primary text-text-default">
+                        <!-- Selector de Extensión (ancho fijo) -->
+                        <select id="file-extension-select" class="w-full sm:w-auto p-2 rounded-xl border border-gray-600 bg-gray-700 text-text-default">
+                            <option value=".html" data-mime="text/html">.html (Rich Text)</option>
+                            <option value=".txt" data-mime="text/plain">.txt (Texto Plano)</option>
+                            <option value=".md" data-mime="text/markdown">.md (Markdown)</option>
+                            <option value=".json" data-mime="application/json">.json</option>
+                            <!-- Se mantiene la opción PDF para el flujo de impresión/mensaje de error -->
+                            <option value=".pdf" data-mime="application/pdf">.pdf (Generar/Imprimir)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideSaveAsModal()" class="px-4 py-2 rounded-xl bg-gray-600 text-text-default hover:bg-gray-700 transition-colors">Cancelar</button>
+                        <button onclick="confirmSaveAs()" class="px-4 py-2 rounded-xl bg-success text-white hover:bg-success-hover transition-colors">Guardar y Descargar</button>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Modal de Biblioteca de Archivos -->
+            <div id="library-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-start justify-center z-50 hidden p-4 sm:p-10 overflow-y-auto">
+                <div class="bg-card-default rounded-xl shadow-2xl w-full max-w-3xl my-8 transform transition-all duration-300 scale-95 opacity-0 border border-gray-700" id="library-modal-content">
+                    <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                        <h3 class="text-2xl font-bold">Biblioteca de Archivos</h3>
+                        <button onclick="hideLibraryModal()" class="text-text-subtle hover:text-text-default">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div id="library-list" class="p-6 space-y-4">
+                        <p class="text-center text-text-subtle">Cargando archivos...</p>
+                    </div>
+                    <div class="p-6 border-t border-gray-700">
+                         <p class="text-xs text-text-subtle">ID de Usuario (requerido para guardar): <span id="user-id-display"></span></p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FIREBASE AND APP LOGIC -->
+    <script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+		import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+		import {
+			getAuth,
+			signInAnonymously,
+			onAuthStateChanged
+		} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+		import {
+			getFirestore
+		} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyBqsm4XMvIwCazZudLqnOknZMhTg1grNdY",
+			authDomain: "visordocumentos-49e3c.firebaseapp.com",
+			projectId: "visordocumentos-49e3c",
+			storageBucket: "visordocumentos-49e3c.firebasestorage.app",
+			messagingSenderId: "857369754640",
+			appId: "1:857369754640:web:07c369b25d0c68af801e95",
+			measurementId: "G-CT4T1G6MKC"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const analytics = getAnalytics(app);
+
+		const auth = getAuth(app);
+		signInAnonymously(auth)
+			.then(() => console.log("Auth anónima OK"))
+			.catch(err => console.error("Error de Auth:", err));
+
+		const db = getFirestore(app);
+
+		console.log("Firebase cargado correctamente");
+</script>
+
+
+
+        // ---------------------------------------------------------------------
+        // 3. LÓGICA DE LA APLICACIÓN (el resto de las funciones)
+        // ---------------------------------------------------------------------
+
+        const showView = (viewId) => {
+            // Ocultar todas las pantallas
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('document-view').classList.add('hidden');
+            document.getElementById('top-bar').classList.add('hidden');
+            
+            // Mostrar la pantalla solicitada
+            if (viewId === 'home') {
+                document.getElementById('home-screen').classList.remove('hidden');
+            } else if (viewId === 'document') {
+                document.getElementById('document-view').classList.remove('hidden');
+                document.getElementById('top-bar').classList.remove('hidden');
+                
+                // CRÍTICO: Al mostrar el documento, asegurar que el título editable refleje SOLO el título.
+                document.getElementById('file-title').textContent = currentFile.title;
+            }
+        };
+        
+        // --- HABILITAR EDICIÓN DE TÍTULO PERMANENTE SIN EXTENSIÓN ---
+        window.updateFileName = (newTitle) => {
+            let cleanTitle = newTitle.trim();
+            if (cleanTitle === "") {
+                cleanTitle = "Documento Sin Título"; 
+            }
+            // CRÍTICO: Solo actualizamos la propiedad `title` sin añadir extensión.
+            currentFile.title = cleanTitle; 
+            document.getElementById('file-title').textContent = currentFile.title;
+        };
+        
+        // Función auxiliar para obtener el nombre completo (título + extensión)
+        const getFullFileName = (file) => `${file.title}${file.extension}`;
+
+        // --- Funcionalidad de Abrir Archivo ---
+
+        window.openFilePicker = () => {
+            document.getElementById('file-input').click();
+        };
+
+        const handleFileSelect = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const mimeType = file.type || getMimeTypeFromExtension(file.name);
+
+            if (!viewableMimeTypes.some(type => mimeType.includes(type))) {
+                showModal('Archivo No Válido', `El tipo de archivo "${mimeType}" no es compatible. Por favor, selecciona un archivo de texto, JSON, Markdown o PDF.`, 'none');
+                event.target.value = null; 
+                return;
+            }
+
+            const isEditable = editableMimeTypes.some(type => mimeType.includes(type));
+            
+            // Separar nombre y extensión para el manejo interno
+            const parts = file.name.split('.');
+            const fileExtension = parts.length > 1 ? '.' + parts.pop() : '';
+            const fileTitle = parts.join('.');
+            
+            currentFile.title = fileTitle;
+            currentFile.extension = fileExtension;
+            currentFile.mimeType = mimeType;
+            currentFile.isEditable = isEditable;
+            currentFile.isNewFile = false;
+            currentFile.isLibraryDoc = false;
+            currentFile.id = null; 
+
+            document.getElementById('toggle-edit-btn').classList.toggle('hidden', !isEditable);
+            document.getElementById('editor-toolbar').classList.add('hidden'); 
+
+            if (mimeType.includes('application/pdf')) {
+                // Manejar PDF
+                const pdfContainer = document.getElementById('pdf-viewer-container');
+                pdfContainer.classList.remove('hidden');
+                document.getElementById('text-editor-container').classList.add('hidden');
+
+                const fileURL = URL.createObjectURL(file);
+                // El iframe para PDF no funcionará en todos los navegadores ni en entornos restringidos como Canvas
+                pdfContainer.innerHTML = `<p class="text-center text-danger p-8">Vista previa de PDF no soportada. Por favor, descarga el archivo para verlo.</p><iframe src="${fileURL}" class="pdf-viewer hidden"></iframe>`;
+                showView('document');
+            } else {
+                // Manejar archivos de texto
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentFile.content = e.target.result;
+                    displayContent(currentFile.content, isEditable);
+                    showView('document');
+                    // Si es editable, el modo por defecto es visualización para archivos cargados
+                    if (isEditable) {
+                        setEditMode(false);
+                    }
+                };
+                reader.onerror = () => {
+                    showModal('Error de Lectura', 'No se pudo leer el archivo.', 'none');
+                };
+                reader.readAsText(file);
+            }
+            event.target.value = null;
+        };
+        
+        document.getElementById('file-input').addEventListener('change', handleFileSelect);
+
+        const getMimeTypeFromExtension = (filename) => {
+            const ext = filename.split('.').pop().toLowerCase();
+            switch (ext) {
+                case 'txt': return 'text/plain';
+                case 'md': return 'text/markdown';
+                case 'json': return 'application/json';
+                case 'pdf': return 'application/pdf';
+                case 'html': return 'text/html';
+                case 'css': return 'text/css';
+                case 'js': return 'text/javascript';
+                default: return 'text/plain';
+            }
+        };
+
+        // --- Funcionalidad de Crear Archivo ---
+
+        window.createNewDocument = () => {
+            currentFile = {
+                id: null,
+                // CRÍTICO: Título por defecto sin extensión
+                title: 'Documento Sin Título', 
+                extension: '.html', // Extensión por defecto para edición enriquecida
+                content: '<h1>Documento Nuevo</h1><p>Empieza a escribir aquí...</p>',
+                mimeType: 'text/html',
+                isEditable: true,
+                isNewFile: true,
+                isLibraryDoc: false,
+            };
+            document.getElementById('file-title').textContent = currentFile.title;
+            document.getElementById('toggle-edit-btn').classList.remove('hidden');
+            
+            displayContent(currentFile.content, true);
+            setEditMode(true); // Nuevo archivo comienza en modo edición
+            showView('document');
+        };
+
+        // --- Control de Visualización y Edición ---
+
+        const contentDisplay = document.getElementById('content-display');
+        const pdfContainer = document.getElementById('pdf-viewer-container');
+        const textContainer = document.getElementById('text-editor-container');
+        const toggleEditBtn = document.getElementById('toggle-edit-btn');
+        const editorToolbar = document.getElementById('editor-toolbar');
+
+        const displayContent = (content, isEditable) => {
+            pdfContainer.classList.add('hidden');
+            textContainer.classList.remove('hidden');
+            
+            if (isEditable) {
+                contentDisplay.innerHTML = content;
+            } else {
+                contentDisplay.textContent = content; 
+            }
+        };
+
+        window.toggleEditMode = () => {
+            setEditMode(!isEditMode);
+        };
+
+        const setEditMode = (isEditing) => {
+            if (!currentFile.isEditable) return;
+
+            isEditMode = isEditing;
+            contentDisplay.contentEditable = isEditing;
+            toggleEditBtn.textContent = isEditing ? 'Visualizar' : 'Editar';
+
+            // Mostrar u ocultar la barra de herramientas de edición enriquecida
+            const isRichText = currentFile.mimeType.includes('text/html');
+            
+            if (isEditing && isRichText) {
+                editorToolbar.classList.remove('hidden');
+            } else {
+                editorToolbar.classList.add('hidden');
+            }
+
+            // Aplicar estilo visual de edición/visualización
+            if (isEditing) {
+                contentDisplay.classList.add('border-2', 'border-primary', 'shadow-inner');
+                contentDisplay.focus();
+            } else {
+                contentDisplay.classList.remove('border-2', 'border-primary', 'shadow-inner');
+                // Si se pasa a modo visualización, actualizar el contenido de la variable
+                currentFile.content = contentDisplay.innerHTML;
+            }
+        };
+
+        // NUEVA FUNCIÓN: Aplica comandos de formato, incluso si no hay selección
+        window.applyFormatBlock = (command, value) => {
+            contentDisplay.focus();
+            
+            // Si no hay selección, insertamos un carácter invisible temporal para forzar la aplicación del formato
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0 && selection.getRangeAt(0).collapsed) {
+                // Carácter invisible de punto cero de ancho (Zero Width No-Break Space)
+                document.execCommand('insertText', false, '\uFEFF');
+            }
+
+            document.execCommand(command, false, value);
+        };
+
+
+        // --- Funcionalidad de Guardar (Descargar y Guardar en Biblioteca) ---
+
+        const getContentToSave = () => {
+            // Asegurarse de que el contenido de la variable esté actualizado antes de guardar
+            if (isEditMode) {
+                currentFile.content = contentDisplay.innerHTML;
+                setEditMode(false);
+            }
+            
+            // Usar innerHTML para HTML/Rich Text, textContent para otros (markdown, json, txt)
+            if (currentFile.mimeType.includes('text/html')) {
+                return contentDisplay.innerHTML;
+            } else {
+                return contentDisplay.textContent;
+            }
+        }
+
+
+        window.triggerSaveFlow = () => {
+            if (!currentFile.title) {
+                showModal('Error al Guardar', 'No hay un archivo cargado o creado para guardar.', 'none');
+                return;
+            }
+            
+            const fullName = getFullFileName(currentFile);
+
+            // Si es un archivo creado recientemente que aún no tiene un nombre y extensión definitiva
+            if (currentFile.isNewFile && !currentFile.isLibraryDoc) {
+                showSaveAsModal();
+            } else {
+                // Archivo cargado o ya guardado en la biblioteca
+                // Flujo de PDF Mejorado: Usar la instrucción de impresión si es PDF
+                if (currentFile.mimeType.includes('application/pdf')) {
+                    showPDFSaveInstruction();
+                } else {
+                    saveToDisk(fullName, currentFile.mimeType, getContentToSave());
+                }
+            }
+
+            // Guardar automáticamente en la biblioteca si es un documento nuevo o editado y no es PDF
+            if ((currentFile.isNewFile || currentFile.isLibraryDoc) && !currentFile.mimeType.includes('application/pdf')) {
+                // Usamos el nombre completo y el contenido actual del archivo
+                saveToLibrary(fullName, currentFile.mimeType, getContentToSave(), currentFile.id);
+            }
+        };
+
+        const saveToDisk = (name, mimeType, content) => {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showModal('Guardado Exitoso', `El archivo "${name}" ha sido descargado.`, 'none');
+        }
+
+        // --- Muestra instrucciones para guardar como PDF ---
+        const showPDFSaveInstruction = () => {
+            showModal(
+                'Guardar como PDF', 
+                'Debido a la naturaleza de edición en vivo (Rich Text), la forma más fiable de obtener un PDF de alta calidad es utilizando la función nativa de tu navegador.<br><br>Para guardar este documento como PDF, por favor usa la función de impresión: <strong>Presiona Ctrl+P (o Cmd+P)</strong> y selecciona "Guardar como PDF" como impresora de destino.',
+                'none'
+            );
+        }
+
+        // --- Funciones del Modal de Guardar Como (Save As) ---
+
+        window.showSaveAsModal = () => {
+            const modal = document.getElementById('save-as-modal');
+            const fileNameInput = document.getElementById('file-name-input');
+            const fileExtensionSelect = document.getElementById('file-extension-select');
+            
+            // Prellenar el nombre con el título actual (sin extensión)
+            fileNameInput.value = currentFile.title || 'Mi Documento';
+            
+            // Seleccionar la extensión actual
+            const optionExists = Array.from(fileExtensionSelect.options).some(opt => opt.value === currentFile.extension);
+            fileExtensionSelect.value = optionExists ? currentFile.extension : '.html';
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('save-as-modal-content').classList.remove('scale-95', 'opacity-0');
+                document.getElementById('save-as-modal-content').classList.add('scale-100', 'opacity-100');
+            }, 10);
+        };
+
+        window.hideSaveAsModal = () => {
+            const modal = document.getElementById('save-as-modal');
+            document.getElementById('save-as-modal-content').classList.remove('scale-100', 'opacity-100');
+            document.getElementById('save-as-modal-content').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        window.confirmSaveAs = () => {
+            const fileTitle = document.getElementById('file-name-input').value.trim();
+            const extensionSelect = document.getElementById('file-extension-select');
+            const extension = extensionSelect.value;
+            const mimeType = extensionSelect.options[extensionSelect.selectedIndex].getAttribute('data-mime');
+            
+            if (!fileTitle) {
+                showModal('Error de Nombre', 'El nombre del archivo no puede estar vacío.', 'none');
+                return;
+            }
+
+            // Actualizar el archivo actual con el nuevo título, extensión y MIME type
+            currentFile.title = fileTitle;
+            currentFile.extension = extension;
+            currentFile.mimeType = mimeType;
+            currentFile.isNewFile = false; // Ya no es un "archivo nuevo sin nombre"
+            
+            document.getElementById('file-title').textContent = currentFile.title; // Actualizar el título visible (solo el título)
+            const fullName = getFullFileName(currentFile);
+
+            hideSaveAsModal();
+
+            if (currentFile.mimeType.includes('application/pdf')) {
+                // Si es PDF, mostrar las instrucciones
+                showPDFSaveInstruction();
+            } else {
+                // Guardar el contenido en el disco 
+                saveToDisk(fullName, currentFile.mimeType, getContentToSave());
+            }
+            
+            // Guardar en la biblioteca (solo si no es un PDF)
+            if (!currentFile.mimeType.includes('application/pdf') && isAuthReady && userId) {
+                 saveToLibrary(fullName, currentFile.mimeType, getContentToSave(), currentFile.id);
+            }
+        };
+        
+
+        // --- Gestión de la Biblioteca (Firestore) ---
+
+        const getLibraryCollectionRef = () => {
+            if (!db || !userId) return null;
+            // Ruta: /artifacts/{appId}/users/{userId}/documents
+            return collection(db, `artifacts/${APP_ID}/users/${userId}/documents`);
+        };
+        
+        let librarySnapshotUnsubscribe = null;
+        let libraryItems = [];
+
+        const setupLibraryListener = () => {
+            if (!userId) {
+                console.warn("setupLibraryListener llamado pero userId es nulo. Se omite la escucha.");
+                return;
+            }
+            if (librarySnapshotUnsubscribe) librarySnapshotUnsubscribe(); // Detener listener previo
+
+            const libraryRef = getLibraryCollectionRef();
+            if (!libraryRef) {
+                console.error("No se pudo iniciar la escucha de Firestore: Referencia no disponible.");
+                return;
+            }
+            
+            // onSnapshot para actualizaciones en tiempo real
+            librarySnapshotUnsubscribe = onSnapshot(libraryRef, (snapshot) => {
+                libraryItems = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                })).sort((a, b) => b.lastEdited - a.lastEdited); // Ordenar por edición reciente
+                renderLibraryList(libraryItems);
+            }, (error) => {
+                console.error("Error al escuchar la biblioteca:", error);
+                document.getElementById('library-list').innerHTML = `<p class="text-danger">Error al cargar la biblioteca. Verifica la conexión y permisos.</p>`;
+            });
+        };
+
+        const saveToLibrary = async (name, mimeType, content, docId = null) => {
+            if (!isAuthReady || !userId) {
+                // Si la autenticación falla, mostramos un error más claro para el usuario.
+                showModal('Error de Biblioteca', 'No se pudo guardar: Debes estar autenticado para usar la Biblioteca. Verifica las Reglas de Seguridad de Firestore.', 'none');
+                return;
+            }
+
+            const libraryRef = getLibraryCollectionRef();
+            if (!libraryRef) return;
+
+            // La biblioteca almacena el nombre completo (título + extensión)
+            const data = {
+                name: name, 
+                mimeType: mimeType,
+                content: content,
+                lastEdited: Date.now(),
+            };
+
+            try {
+                if (docId) {
+                    // Actualizar documento existente
+                    const docRef = doc(libraryRef, docId);
+                    await updateDoc(docRef, data);
+                    showModal('Guardado en Biblioteca', `El archivo "${name}" ha sido actualizado en tu biblioteca.`, 'none');
+                } else {
+                    // Crear nuevo documento
+                    const createdAt = Date.now();
+                    const result = await addDoc(libraryRef, { ...data, createdAt, userId });
+                    currentFile.id = result.id; // Asignar ID al archivo actual
+                    currentFile.isLibraryDoc = true;
+                    showModal('Guardado en Biblioteca', `El archivo "${name}" ha sido guardado por primera vez en tu biblioteca.`, 'none');
+                }
+            } catch (e) {
+                console.error("Error al guardar en la biblioteca: ", e);
+                showModal('Error de Guardado', `No se pudo guardar el archivo en la biblioteca. Error: ${e.message}`, 'none');
+            }
+        };
+
+        const renderLibraryList = (items) => {
+            const listElement = document.getElementById('library-list');
+            listElement.innerHTML = '';
+
+            if (items.length === 0) {
+                listElement.innerHTML = `<p class="text-center text-text-subtle italic">La biblioteca está vacía. Crea o edita un documento para guardarlo.</p>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const date = new Date(item.lastEdited).toLocaleString();
+                const element = document.createElement('div');
+                // Estilo minimalista oscuro para elementos de la biblioteca
+                element.className = 'flex items-center justify-between p-4 rounded-xl border border-gray-700 bg-card-default shadow-md hover:ring-2 ring-primary transition-all duration-200';
+                element.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-4">
+                        <p class="font-medium truncate">${item.name}</p>
+                        <p class="text-xs text-text-subtle">Editado: ${date} - Tipo: ${item.mimeType.split('/').pop()}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="loadFromLibrary('${item.id}')" class="p-2 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors" title="Abrir">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </button>
+                        <button onclick="cloneLibraryItem('${item.id}')" class="p-2 rounded-full bg-gray-600 text-white hover:bg-gray-700 transition-colors" title="Clonar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v6a2 2 0 002 2h6m4-4V7a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3"></path></svg>
+                        </button>
+                        <button onclick="deleteLibraryItem('${item.id}', '${item.name}')" class="p-2 rounded-full bg-danger text-white hover:bg-danger-hover transition-colors" title="Eliminar">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                listElement.appendChild(element);
+            });
+        };
+
+        window.loadFromLibrary = (itemId) => {
+            const item = libraryItems.find(i => i.id === itemId);
+            if (!item) {
+                showModal('Error', 'Archivo de biblioteca no encontrado.', 'none');
+                return;
+            }
+
+            hideLibraryModal();
+            
+            // Separar nombre y extensión del archivo guardado para el manejo interno
+            const parts = item.name.split('.');
+            const fileExtension = parts.length > 1 ? '.' + parts.pop() : '';
+            const fileTitle = parts.join('.');
+
+            // Cargar datos en el archivo actual
+            currentFile = {
+                id: item.id,
+                title: fileTitle,
+                extension: fileExtension,
+                content: item.content,
+                mimeType: item.mimeType,
+                isEditable: editableMimeTypes.some(type => item.mimeType.includes(type)),
+                isNewFile: false,
+                isLibraryDoc: true,
+            };
+
+            document.getElementById('file-title').textContent = currentFile.title; // CRÍTICO: Solo el título
+            document.getElementById('toggle-edit-btn').classList.toggle('hidden', !currentFile.isEditable);
+            
+            if (currentFile.mimeType.includes('application/pdf')) {
+                showModal('PDF no Soportado', 'La biblioteca no almacena PDFs directamente. Solo se pueden almacenar archivos de texto.', 'none');
+                resetApp('no-confirm');
+                return;
+            }
+            
+            displayContent(currentFile.content, currentFile.isEditable);
+            setEditMode(false); 
+            showView('document');
+        };
+
+        window.cloneLibraryItem = async (itemId) => {
+            const item = libraryItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            const newName = `Copia de ${item.name}`;
+            await saveToLibrary(newName, item.mimeType, item.content);
+            hideLibraryModal();
+        };
+
+        window.deleteLibraryItem = (itemId, name) => {
+            showModal('Confirmar Eliminación', `¿Estás seguro de que deseas eliminar permanentemente el archivo "${name}" de la biblioteca?`, 'confirm', () => deleteFileFromLibrary(itemId, name));
+        };
+
+        const deleteFileFromLibrary = async (itemId, name) => {
+            const libraryRef = getLibraryCollectionRef();
+            if (!libraryRef) {
+                showModal('Error', `No se pudo eliminar "${name}". No hay conexión o permisos.`, 'none');
+                return;
+            }
+            
+            try {
+                await deleteDoc(doc(libraryRef, itemId));
+                hideModal();
+                showModal('Eliminado', `El archivo "${name}" ha sido eliminado.`, 'none');
+            } catch (e) {
+                console.error("Error al eliminar el documento: ", e);
+                showModal('Error', `No se pudo eliminar "${name}".`, 'none');
+            }
+        };
+
+
+        // --- Funciones de Modal / Interfaz de Usuario ---
+
+        window.showLibraryModal = () => {
+            if (!isAuthReady || !userId) {
+                showModal('Conexión Requerida', 'La Biblioteca requiere que estés conectado. Por favor, verifica tu conexión y las reglas de seguridad de Firestore.', 'none');
+                return;
+            }
+            const modal = document.getElementById('library-modal');
+            modal.classList.remove('hidden');
+            // Animación
+            setTimeout(() => {
+                document.getElementById('library-modal-content').classList.remove('scale-95', 'opacity-0');
+                document.getElementById('library-modal-content').classList.add('scale-100', 'opacity-100');
+            }, 10);
+        };
+
+        window.hideLibraryModal = () => {
+            const modal = document.getElementById('library-modal');
+            document.getElementById('library-modal-content').classList.remove('scale-100', 'opacity-100');
+            document.getElementById('library-modal-content').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        let modalConfirmAction = null;
+        let modalSecondaryAction = null; 
+
+        const showModal = (title, message, type = 'confirm', callbackConfirm = null, callbackSecondary = null) => {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').innerHTML = message;
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            const secondaryBtn = document.getElementById('modal-secondary-btn'); 
+
+            // Restablecer estilos de botones
+            confirmBtn.classList.remove('hidden', 'bg-success', 'hover:bg-success-hover');
+            confirmBtn.classList.add('bg-primary', 'hover:bg-primary-hover');
+            cancelBtn.classList.remove('hidden');
+            secondaryBtn.classList.add('hidden'); 
+
+            if (type === 'confirm') {
+                confirmBtn.textContent = 'Aceptar';
+                modalConfirmAction = callbackConfirm;
+                modalSecondaryAction = null;
+            } else if (type === 'reset') { 
+                confirmBtn.textContent = 'Guardar y Salir';
+                confirmBtn.classList.remove('bg-primary', 'hover:bg-primary-hover');
+                confirmBtn.classList.add('bg-success', 'hover:bg-success-hover');
+                
+                secondaryBtn.classList.remove('hidden');
+                cancelBtn.textContent = 'Cancelar';
+
+                modalConfirmAction = callbackConfirm; 
+                modalSecondaryAction = callbackSecondary; 
+            } else if (type === 'none') {
+                confirmBtn.textContent = 'Cerrar';
+                cancelBtn.classList.add('hidden');
+                confirmBtn.classList.remove('bg-success', 'hover:bg-success-hover');
+                confirmBtn.classList.add('bg-primary', 'hover:bg-primary-hover');
+                modalConfirmAction = null;
+                modalSecondaryAction = null;
+            } else {
+                confirmBtn.textContent = 'Aceptar';
+                modalConfirmAction = callbackConfirm;
+                modalSecondaryAction = null;
+            }
+
+            
+            modal.classList.remove('hidden');
+            // Animación
+            setTimeout(() => {
+                document.getElementById('modal-content-area').classList.remove('scale-95', 'opacity-0');
+                document.getElementById('modal-content-area').classList.add('scale-100', 'opacity-100');
+            }, 10);
+        };
+
+        window.hideModal = () => {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-content-area').classList.remove('scale-100', 'opacity-100');
+            document.getElementById('modal-content-area').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            modalConfirmAction = null;
+            modalSecondaryAction = null;
+        };
+
+        window.handleModalConfirm = () => {
+            if (modalConfirmAction) {
+                modalConfirmAction();
+            } else {
+                hideModal();
+            }
+        };
+
+        // Manejar la acción secundaria (Salir sin Guardar)
+        window.handleModalSecondary = () => {
+            if (modalSecondaryAction) {
+                modalSecondaryAction();
+            }
+            hideModal();
+        };
+
+        window.resetApp = (confirmationType) => {
+            const doReset = () => {
+                currentFile = { id: null, title: '', extension: '.html', content: '', mimeType: 'text/html', isEditable: false, isNewFile: false, isLibraryDoc: false };
+                isEditMode = false;
+                document.getElementById('pdf-viewer-container').innerHTML = '';
+                document.getElementById('content-display').innerHTML = '';
+                document.getElementById('editor-toolbar').classList.add('hidden');
+                document.getElementById('toggle-edit-btn').classList.remove('hidden'); 
+                
+                // Asegurar que el título editable se restablezca al valor por defecto
+                const fileTitleElement = document.getElementById('file-title');
+                if (fileTitleElement) {
+                    fileTitleElement.contentEditable = true; // El título es siempre editable
+                    fileTitleElement.classList.add('cursor-text');
+                }
+
+                showView('home');
+                hideModal();
+            };
+
+            // Comprobar si hay cambios que justifiquen la confirmación (archivo nuevo o en modo edición)
+            const hasUnsavedChanges = currentFile.isNewFile || isEditMode || currentFile.isLibraryDoc; // Consideramos biblioteca como con cambios potenciales
+
+            if (confirmationType === 'confirm' && hasUnsavedChanges) {
+                // Flujo de 3 botones: Guardar y Salir / Salir sin Guardar / Cancelar
+                showModal('Guardar Cambios', '¿Deseas guardar el archivo actual (y actualizar la biblioteca si aplica) antes de cerrar?', 'reset', 
+                    // Acción Principal (Guardar y Salir)
+                    () => {
+                        triggerSaveFlow(); // Guardar en disco y biblioteca
+                        // Usamos un pequeño retraso para asegurar que el guardado se inicie antes del reset
+                        setTimeout(doReset, 500); 
+                    },
+                    // Acción Secundaria (Salir sin Guardar)
+                    () => {
+                        doReset(); // Solo resetear sin guardar
+                    }
+                );
+            } else {
+                // Reinicio directo (sin confirmación o si no hay cambios)
+                doReset();
+            }
+        };
+
+        // --- Inicialización al Cargar la Página ---
+
+        window.onload = () => {
+            initializeFirebase();
+        };
+
+        // Asegurar que el focus se mantenga en el editor si está en modo edición
+        contentDisplay.addEventListener('click', () => {
+            if (isEditMode) {
+                contentDisplay.focus();
+            }
+        });
+</body>
+</html>
