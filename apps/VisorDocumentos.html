@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuSphere - Visor y Editor de Documentos</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Uso de la fuente Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .editor-container { min-height: 80vh; max-height: 80vh; overflow-y: auto; }
+        .document-area { min-height: 70vh; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 2rem; }
+        /* Estilos específicos para la barra de herramientas del editor */
+        .toolbar button { padding: 0.5rem 0.75rem; border-radius: 0.375rem; transition: all 0.1s; }
+        /* Fija el color de hover del toolbar para el modo oscuro */
+        .toolbar button:hover { background-color: #3f475a; } 
+        
+        /* Estilo para PDF Viewer */
+        .pdf-viewer { width: 100%; height: 75vh; border: none; }
+        
+        /* Estilo específico para la previsualización de código */
+        #document-viewer pre {
+            /* Fuente monoespaciada para código */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            /* Estilo tipo bloque de código oscuro */
+            background-color: #0f172a; /* slate-900 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-bg-dark': '#1e293b',
+                        'secondary-bg-dark': '#334155',
+                        'text-dark': '#f8fafc',
+                        'accent': '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark bg-primary-bg-dark text-text-dark min-h-screen">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, query, onSnapshot, setDoc, addDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Habilitar logs de debug para Firestore
+        setLogLevel('Debug');
+
+       const firebaseConfig = {
+		  apiKey: "AIzaSyBqsm4XMvIwCazZudLqnOknZMhTg1grNdY",
+		  authDomain: "visordocumentos-49e3c.firebaseapp.com",
+		  projectId: "visordocumentos-49e3c",
+		  storageBucket: "visordocumentos-49e3c.firebasestorage.app",
+		  messagingSenderId: "857369754640",
+		  appId: "1:857369754640:web:07c369b25d0c68af801e95",
+		  measurementId: "G-CT4T1G6MKC"
+		};
+
+		const appId = "visordocumentos-49e3c"; // puedes usar cualquiera
+		const initialAuthToken = null;
+
+        let db;
+        let auth;
+        let userId = null;
+        let isAuthReady = false;
+
+        const state = {
+            view: 'home', // 'home', 'viewer', 'editor', 'library'
+            currentFile: null, // { id: ..., name: ..., content: ..., type: ... }
+            libraryFiles: [],
+        };
+
+        // Referencias del DOM
+        const appContainer = document.getElementById('app-container');
+        const libraryButton = document.getElementById('library-button');
+        const homeButton = document.getElementById('home-button');
+        const appTitle = document.getElementById('app-title');
+
+        // --- Funciones de Firestore ---
+        function getUserFilesCollection() {
+			if (!db || !userId) return null;
+			return collection(db, `users/${userId}/documents`);
+		}
+
+
+        async function saveToLibrary(file) {
+            if (!db || !userId) {
+                console.error("Firestore no está listo o el usuario no está autenticado.");
+                return;
+            }
+
+            const collectionRef = getUserFilesCollection();
+            const dataToSave = {
+                name: file.name,
+                content: file.content,
+                type: file.type,
+                updatedAt: serverTimestamp(),
+            };
+
+            try {
+                if (file.id) {
+                    // Actualizar documento existente
+                    const docRef = doc(collectionRef, file.id);
+                    await setDoc(docRef, dataToSave, { merge: true });
+                    console.log("Documento actualizado con ID: ", file.id);
+                } else {
+                    // Crear nuevo documento
+                    const docRef = await addDoc(collectionRef, {
+                        ...dataToSave,
+                        createdAt: serverTimestamp(),
+                    });
+                    file.id = docRef.id; // Asignar ID al archivo actual
+                    console.log("Documento creado con ID: ", docRef.id);
+                }
+                showToast(`'${file.name}' guardado en la Biblioteca.`);
+            } catch (e) {
+                console.error("Error al guardar en Firestore: ", e);
+                showToast("Error al guardar en la Biblioteca.", true);
+            }
+        }
+
+        function setupLibraryListener() {
+            if (!db || !userId) {
+                console.warn("No se puede iniciar el listener de Firestore hasta la autenticación.");
+                return () => {}; // Devolver función vacía para evitar errores
+            }
+
+            const filesQuery = query(getUserFilesCollection());
+
+            const unsubscribe = onSnapshot(filesQuery, (snapshot) => {
+                const files = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    updatedAt: doc.data().updatedAt?.toDate().toLocaleString() || 'N/A'
+                }));
+                state.libraryFiles = files.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                if (state.view === 'library') {
+                    renderApp(); // Volver a renderizar si estamos en la vista de biblioteca
+                }
+                console.log("Archivos de biblioteca cargados:", state.libraryFiles.length);
+            }, (error) => {
+                console.error("Error al escuchar la biblioteca:", error);
+            });
+            return unsubscribe;
+        }
+
+        async function deleteFile(fileId) {
+            if (!db || !userId) return;
+            const collectionRef = getUserFilesCollection();
+            try {
+                await deleteDoc(doc(collectionRef, fileId));
+                showToast(`Archivo eliminado correctamente.`, false);
+            } catch (e) {
+                console.error("Error al eliminar el documento: ", e);
+                showToast("Error al eliminar el archivo.", true);
+            }
+        }
+        
+        async function cloneFile(file) {
+            if (!db || !userId) return;
+            const collectionRef = getUserFilesCollection();
+            try {
+                const newName = `Copia de ${file.name}`;
+                await addDoc(collectionRef, {
+                    name: newName,
+                    content: file.content,
+                    type: file.type,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+                showToast(`Archivo '${newName}' clonado.`);
+            } catch (e) {
+                console.error("Error al clonar el documento: ", e);
+                showToast("Error al clonar el archivo.", true);
+            }
+        }
+
+        // --- Manejo de la autenticación y Firebase ---
+        let unsubscribeAuth = () => {};
+        let unsubscribeLibrary = () => {};
+
+        function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        console.log("Usuario autenticado. UID:", userId);
+                        unsubscribeLibrary = setupLibraryListener();
+                    } else {
+                        // Intentar inicio de sesión o anónimo si falla
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Error de autenticación:", error);
+                        }
+                    }
+                    renderApp(); // Renderiza la aplicación después del chequeo inicial de auth
+                });
+            } catch (e) {
+                console.error("Error al inicializar Firebase:", e);
+                isAuthReady = true; // Permite que la aplicación continúe sin persistencia
+                renderApp();
+            }
+        }
+
+        // --- Funciones de la aplicación ---
+        function navigate(view, file = null) {
+            state.view = view;
+            state.currentFile = file;
+            if (view === 'editor' && file && file.type === 'application/pdf') {
+                 // Prevenir edición de PDFs
+                 state.view = 'viewer';
+                 showToast("No se pueden editar archivos PDF.", true);
+            }
+            if (view === 'viewer' && file && isFileEditable(file.name)) {
+                // Si abrimos un archivo editable, por defecto está en modo visualización
+                state.currentFile.isEditing = false;
+            }
+            renderApp();
+        }
+
+        // Lista ampliada de extensiones de archivo que se consideran editables (texto plano o código)
+        const editableExtensions = [
+            'txt', 'json', 'md', 'html', 'css', 'js', 'jsx', 'ts', 'tsx', 
+            'py', 'java', 'c', 'cpp', 'h', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'xml', 'yml', 'yaml'
+        ];
+
+        function isFileEditable(fileName) {
+            if (!fileName) return false;
+            const ext = fileName.split('.').pop().toLowerCase();
+            return editableExtensions.includes(ext);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const name = file.name;
+            const ext = name.split('.').pop().toLowerCase();
+            let fileType = file.type || 'text/plain'; 
+
+            const pdfMimeType = 'application/pdf';
+
+            if (ext === 'pdf') {
+                fileType = pdfMimeType;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const pdfDataUrl = e.target.result;
+                    navigate('viewer', { name: name, content: pdfDataUrl, type: fileType });
+                    event.target.value = '';
+                };
+                reader.readAsDataURL(file);
+            } else if (editableExtensions.includes(ext)) {
+                // Para todos los demás tipos de texto/código
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Usamos el contenido como texto sin formato para los archivos de código/texto genéricos
+                    navigate('viewer', { name: name, content: e.target.result, type: fileType, isEditing: false, originalContent: e.target.result });
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            } else {
+                 showToast(`Tipo de archivo no permitido: ${ext}. Solo se permiten PDF o archivos de código/texto plano.`, true);
+                 event.target.value = ''; 
+            }
+        }
+        
+        function downloadFile(fileName, content, mimeType = 'text/plain') {
+            try {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`'${fileName}' guardado en tu sistema.`);
+            } catch (e) {
+                console.error("Error al descargar el archivo:", e);
+                showToast("Error al intentar guardar el archivo.", true);
+            }
+        }
+        
+        function createNewFile() {
+            const timestamp = new Date().toLocaleTimeString('es-ES', { hour12: false });
+            const newFile = {
+                name: `Nuevo Documento ${timestamp}.txt`,
+                content: 'Empieza a escribir aquí...',
+                type: 'text/plain',
+                isEditing: true,
+            };
+            navigate('editor', newFile);
+        }
+
+        function toggleEditMode() {
+            if (!state.currentFile || state.currentFile.type === 'application/pdf') return;
+            
+            const editor = document.getElementById('document-editor');
+            if (state.currentFile.isEditing) {
+                // Guardar el contenido del editor (que es HTML con formato)
+                state.currentFile.content = editor.innerHTML; 
+                state.currentFile.isEditing = false;
+                showToast(`Modo visualización activado. Recuerda Guardar en Biblioteca si deseas mantener los cambios.`);
+            } else {
+                state.currentFile.isEditing = true;
+                showToast('Modo edición activado.');
+            }
+            renderApp();
+        }
+
+        function applyEditorCommand(command, value = null) {
+            const editor = document.getElementById('document-editor');
+            if (editor && state.currentFile && state.currentFile.isEditing) {
+                document.execCommand(command, false, value);
+                editor.focus();
+                // Actualizar el contenido en el estado después de cada comando
+                state.currentFile.content = editor.innerHTML; 
+            }
+        }
+        
+        function handleSave() {
+            const editor = document.getElementById('document-editor');
+            if (editor && state.currentFile && state.currentFile.isEditing) {
+                // Si está en modo edición de texto enriquecido, extraemos el texto plano (limpio de HTML)
+                // para que los archivos de código/texto se descarguen correctamente.
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = editor.innerHTML;
+                state.currentFile.downloadContent = tempDiv.innerText;
+            } else {
+                // Si es PDF o está en modo visualización (no hay editor), usamos el contenido guardado.
+                state.currentFile.downloadContent = state.currentFile.content;
+            }
+            
+            if (state.currentFile) {
+                // Pedir nombre y extensión para la descarga
+                let newFileName = prompt("Introduce el nombre del archivo para la descarga:", state.currentFile.name);
+                if (newFileName) {
+                    const contentToSave = state.currentFile.downloadContent;
+                    // Mantener el mimeType original para la descarga (especialmente para PDF)
+                    const mimeType = state.currentFile.type; 
+
+                    downloadFile(newFileName, contentToSave, mimeType);
+                }
+            }
+        }
+
+        // --- Renderizado de la UI ---
+        function renderHeader() {
+            const isViewerOrEditor = state.view === 'viewer' || state.view === 'editor';
+            const isEditable = state.currentFile && isFileEditable(state.currentFile.name);
+            const isEditing = state.currentFile && state.currentFile.isEditing;
+            const isLibrary = state.view === 'library';
+
+            let headerHTML = `
+                <div class="flex justify-between items-center p-4 shadow-lg bg-secondary-bg-dark text-text-dark transition-colors">
+                    <div class="flex items-center space-x-4">
+                        <button id="home-button" onclick="navigate('home')" class="p-2 rounded-full hover:bg-accent hover:text-white transition duration-150 ${state.view === 'home' ? 'bg-accent text-white' : ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                        </button>
+                        <button id="library-button" onclick="navigate('library')" class="p-2 rounded-full hover:bg-accent hover:text-white transition duration-150 ${isLibrary ? 'bg-accent text-white' : ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        ${isEditable ? `<button id="edit-toggle" onclick="toggleEditMode()" class="flex items-center px-4 py-2 rounded-lg font-medium transition duration-150 ${isEditing ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-accent hover:bg-blue-600 text-white'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-5.657 5.657l-4.95 4.95A1 1 0 004 15h4a1 1 0 001-1v-4a1 1 0 00-1-1z"/></svg>
+                            ${isEditing ? 'Visualizar' : 'Editar'}
+                        </button>` : ''}
+                        
+                        ${isViewerOrEditor ? `
+                            ${isEditable && isEditing ? `<button onclick="saveToLibrary(state.currentFile)" class="flex items-center px-4 py-2 rounded-lg font-medium transition duration-150 bg-green-500 hover:bg-green-600 text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M7.707 10.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h-1v5.586l-1.293-1.293z"/><path d="M9 16a1 1 0 011-1h4a1 1 0 010 2h-4a1 1 0 01-1-1z"/></svg>
+                                Guardar en Biblioteca
+                            </button>` : ''}
+                            <button onclick="handleSave()" class="flex items-center px-4 py-2 rounded-lg font-medium transition duration-150 bg-gray-600 hover:bg-gray-700 text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4.305 4.905a1 1 0 001.414 1.414l.707-.707a1 1 0 00-1.414-1.414l-.707.707zM15.707 4.905a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 011.414-1.414l.707.707zM10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8 6a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd"/></svg>
+                                Descargar
+                            </button>` : ''}
+                    </div>
+                </div>
+            `;
+            return headerHTML;
+        }
+
+        function renderEditorToolbar() {
+            if (!state.currentFile || !state.currentFile.isEditing) return '';
+            
+            // Clase de tema fija a oscuro
+            const themeClass = 'bg-secondary-bg-dark text-text-dark';
+
+            return `
+                <div class="toolbar flex flex-wrap gap-2 p-3 ${themeClass} shadow-md transition-colors">
+                    <button onclick="applyEditorCommand('bold')" title="Negrita">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5h4.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5H8V5zm0 9h5.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5H8V14zm-2 0H5V3h3.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H6z"/></svg>
+                    </button>
+                    <button onclick="applyEditorCommand('italic')" title="Cursiva">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4h4v2h-2.15l-3.9 12h2.05v2h-4v-2h2.15l3.9-12h-2.05z"/></svg>
+                    </button>
+                    <button onclick="applyEditorCommand('underline')" title="Subrayar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17a5 5 0 0 0 5-5V4h2V3h-8v1H9v8a5 5 0 0 0 5 5zm-5-5V4H5V3h14v1h-2v8a7 7 0 0 1-7 7 7 7 0 0 1-7-7zM5 20h14v1H5z"/></svg>
+                    </button>
+
+                    <select onchange="applyEditorCommand('fontSize', this.value)" class="p-1 rounded bg-transparent border-gray-600">
+                        <option value="" selected disabled>Tamaño</option>
+                        <option value="3">Pequeño</option>
+                        <option value="5">Normal</option>
+                        <option value="7">Grande</option>
+                    </select>
+
+                    <select onchange="applyEditorCommand('fontName', this.value)" class="p-1 rounded bg-transparent border-gray-600">
+                        <option value="" selected disabled>Fuente</option>
+                        <option value="Inter">Inter</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Georgia">Georgia</option>
+                    </select>
+                    
+                    <input type="color" onchange="applyEditorCommand('foreColor', this.value)" title="Color de Texto" class="w-8 h-8 rounded-md cursor-pointer">
+                </div>
+            `;
+        }
+
+        function renderHome() {
+
+            return `
+                <div class="flex flex-col items-center justify-center h-full pt-20">
+                    <h2 class="text-4xl font-extrabold mb-8 text-accent">Bienvenido a DocuSphere</h2>
+                    <p class="text-xl mb-12 opacity-80">Selecciona una opción para empezar a trabajar con tus documentos.</p>
+                    
+                    <div class="flex flex-col sm:flex-row space-y-6 sm:space-y-0 sm:space-x-8">
+                        
+                        <!-- Abrir Archivo -->
+                        <label for="file-upload" class="cursor-pointer flex flex-col items-center justify-center p-8 w-64 h-48 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 bg-secondary-bg-dark hover:bg-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-3 text-accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 13H4a1 1 0 110-2h3.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-semibold">Abrir Archivo</span>
+                            <span class="text-xs opacity-60 mt-1 text-center">Visor de archivos (PDF, TXT, JSON...)</span>
+                            <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)">
+                        </label>
+
+                        <!-- Crear Archivo -->
+                        <button onclick="createNewFile()" class="flex flex-col items-center justify-center p-8 w-64 h-48 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 bg-secondary-bg-dark hover:bg-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-3 text-accent" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                            <span class="text-lg font-semibold">Crear Archivo</span>
+                            <span class="text-sm opacity-60 mt-1 text-center">Editor de texto enriquecido</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderViewer() {
+            if (!state.currentFile) return `<div class="p-8 text-center">No hay documento abierto.</div>`;
+
+            const isPDF = state.currentFile.type === 'application/pdf';
+            const isEditing = state.currentFile.isEditing;
+            // Clase de fondo fija para el modo oscuro
+            const bgClass = 'bg-secondary-bg-dark border border-gray-700'; 
+            const placeholder = isEditing ? 'Escribe tu contenido aquí...' : 'Documento vacío.';
+
+            let contentHTML;
+
+            if (isPDF) {
+                contentHTML = `<iframe src="${state.currentFile.content}" class="pdf-viewer rounded-lg shadow-xl" title="${state.currentFile.name}"></iframe>`;
+            } else if (isEditing) {
+                // Modo Edición (contenteditable)
+                contentHTML = `
+                    <div id="document-editor" 
+                         contenteditable="true" 
+                         class="document-area rounded-lg ${bgClass} overflow-y-auto w-full p-8 transition-colors focus:outline-none" 
+                         style="min-height: 70vh;"
+                         oninput="state.currentFile.content = this.innerHTML;">${state.currentFile.content || ''}</div>
+                `;
+            } else {
+                // Modo Visualización (muestra el contenido en un bloque <pre> para código/texto plano)
+                // Usamos innerText para archivos editables que podrían tener formato HTML de un guardado previo
+                const contentText = isFileEditable(state.currentFile.name) ? 
+                    (state.currentFile.content.replace(/<[^>]*>?/gm, '') || placeholder) : 
+                    state.currentFile.content; // Para archivos no editables (e.g., binarios), usamos el contenido crudo (aunque solo esperamos PDF o texto)
+
+                contentHTML = `
+                    <div id="document-viewer" 
+                         class="document-area rounded-lg ${bgClass} overflow-y-auto w-full p-8 transition-colors">
+                        <pre class="whitespace-pre-wrap text-sm">${contentText}</pre>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="p-4 sm:p-8 editor-container">
+                    ${!isPDF && isEditing ? renderEditorToolbar() : ''}
+                    ${contentHTML}
+                </div>
+            `;
+        }
+
+        function renderLibrary() {
+            // Clases de lista y texto fijas para el modo oscuro
+            const listClass = 'bg-secondary-bg-dark hover:bg-gray-700 border-gray-700';
+
+            if (!isAuthReady) {
+                return `<div class="p-8 text-center text-xl opacity-60">Cargando conexión con la Biblioteca...</div>`;
+            }
+
+            if (!state.libraryFiles.length) {
+                return `
+                    <div class="p-8 text-center text-xl opacity-60">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-accent" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 6a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V6zM7 14a1 1 0 00-1 1v1a1 1 0 102 0v-1a1 1 0 00-1-1zM13 14a1 1 0 00-1 1v1a1 1 0 102 0v-1a1 1 0 00-1-1z"/></svg>
+                        Tu biblioteca está vacía. ¡Crea o edita un archivo para guardarlo aquí!
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="p-4 sm:p-8">
+                    <h2 class="text-3xl font-bold mb-6">Biblioteca de Archivos</h2>
+                    <p class="text-sm opacity-75 mb-4">ID de Usuario: ${userId || 'Invitado (Sin Persistencia)'}</p>
+                    <div class="space-y-3">
+                        ${state.libraryFiles.map(file => `
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg shadow-md border ${listClass} transition-shadow">
+                                <div class="flex flex-col mb-2 sm:mb-0">
+                                    <span class="text-lg font-semibold truncate max-w-xs sm:max-w-md">${file.name}</span>
+                                    <span class="text-xs opacity-75">Última edición: ${file.updatedAt}</span>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button onclick="navigate('viewer', { ...file, isEditing: false })" title="Abrir" class="p-2 rounded-full text-white bg-accent hover:bg-blue-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                    <button onclick="cloneFile(${JSON.stringify(file).replace(/"/g, '&quot;')})" title="Clonar" class="p-2 rounded-full bg-gray-600 hover:bg-gray-500 text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z"/><path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z"/></svg>
+                                    </button>
+                                    <button onclick="deleteFile('${file.id}')" title="Eliminar" class="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- Renderizador Principal ---
+        function renderApp() {
+            // 1. Renderizar la cabecera
+            const header = document.getElementById('app-header');
+            if (header) {
+                header.innerHTML = renderHeader();
+            }
+
+            // 2. Renderizar la vista principal
+            let content = '';
+            switch (state.view) {
+                case 'home':
+                    content = renderHome();
+                    break;
+                case 'viewer':
+                case 'editor':
+                    content = renderViewer();
+                    break;
+                case 'library':
+                    content = renderLibrary();
+                    break;
+                default:
+                    content = renderHome();
+            }
+            appContainer.innerHTML = content;
+        }
+
+        // --- Toast (Notificaciones) ---
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            
+            const baseClass = isError ? 'bg-red-600' : 'bg-green-600';
+            const hideClass = 'opacity-0 translate-y-full';
+            const showClass = 'opacity-95 translate-y-0';
+            
+            // Mostrar
+            toast.className = `fixed bottom-4 right-4 p-3 rounded-lg shadow-xl text-white transition-all duration-300 ${baseClass} ${showClass}`;
+            
+            // Ocultar después de 3 segundos
+            setTimeout(() => {
+                toast.classList.add(hideClass);
+                toast.classList.remove(showClass);
+            }, 3000);
+        }
+
+        // Inicialización al cargar la página
+        window.onload = () => {
+            initFirebase();
+            renderApp();
+        };
+
+        // Exportar funciones necesarias al ámbito global para los eventos en HTML
+        window.navigate = navigate;
+        window.handleFileUpload = handleFileUpload;
+        window.createNewFile = createNewFile;
+        window.toggleEditMode = toggleEditMode;
+        window.handleSave = handleSave;
+        window.applyEditorCommand = applyEditorCommand;
+        window.saveToLibrary = saveToLibrary;
+        window.deleteFile = deleteFile;
+        window.cloneFile = cloneFile;
+        window.state = state; // Exponer el estado para funciones onclick
+    </script>
+    
+    <!-- Contenedor principal de la aplicación -->
+    <div id="app-header">
+        <!-- El encabezado se renderizará aquí -->
+    </div>
+
+    <main id="app-container" class="pb-16 min-h-[90vh]">
+        <!-- El contenido de la vista se renderizará aquí -->
+    </main>
+    
+    <!-- Contenedor del Toast (Notificación) -->
+    <div id="toast" class="fixed bottom-4 right-4 p-3 rounded-lg shadow-xl text-white transition-all duration-300 opacity-0 translate-y-full">
+        Mensaje de notificación...
+    </div>
+
+</body>
+</html>
