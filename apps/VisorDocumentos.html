@@ -563,30 +563,37 @@
 
             return `
                 <div class="p-4 sm:p-8">
-                    <h2 class="text-3xl font-bold mb-6">Biblioteca de Archivos</h2>
-                    <p class="text-sm opacity-75 mb-4">ID de Usuario: ${userId || 'Invitado (Sin Persistencia)'}</p>
-                    <div class="space-y-3">
-                        ${state.libraryFiles.map(file => `
-                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg shadow-md border ${listClass} transition-shadow">
-                                <div class="flex flex-col mb-2 sm:mb-0">
-                                    <span class="text-lg font-semibold truncate max-w-xs sm:max-w-md">${file.name}</span>
-                                    <span class="text-xs opacity-75">Última edición: ${file.updatedAt}</span>
-                                </div>
-                                <div class="flex space-x-2">								
-									<button class="btn-clonar" data-file-id="${file.id}" title="Clonar" class="p-2 rounded-full bg-gray-600 hover:bg-gray-500 text-white">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+					<h2 class="text-3xl font-bold mb-6">Biblioteca de Archivos</h2>
+					<div class="space-y-3">
+						${state.libraryFiles.map(file => `
+							<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg shadow-md border ${listClass} transition-shadow">
+								<div class="flex flex-col mb-2 sm:mb-0">
+									<span class="text-lg font-semibold truncate max-w-xs sm:max-w-md">${file.name}</span>
+									<span class="text-xs opacity-75">Última edición: ${file.updatedAt}</span>
+								</div>
+								<div class="flex space-x-2">		
+									<button class="btn-abrir p-2 rounded-full text-white bg-accent hover:bg-blue-600" data-file-id="${file.id}" title="Abrir">							
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+											<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+											<path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+										</svg>
 									</button>
-									<button class="btn-eliminar" data-file-id="${file.id}" title="Eliminar" class="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z"/><path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z"/></svg>
+									<button class="btn-clonar p-2 rounded-full bg-gray-600 hover:bg-gray-500 text-white" data-file-id="${file.id}" title="Clonar">
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+											<path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z"/>
+											<path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z"/>
+										</svg>
 									</button>
-									<button class="btn-abrir" data-file-id="${file.id}" title="Abrir" class="p-2 rounded-full text-white bg-accent hover:bg-blue-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd"/></svg>
+									<button class="btn-eliminar p-2 rounded-full bg-red-500 hover:bg-red-600 text-white" data-file-id="${file.id}" title="Eliminar">
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+											<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd"/>
+										</svg>
 									</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
+								</div>
+							</div>
+						`).join('')}
+					</div>
+				</div>
             `;
 
         }
