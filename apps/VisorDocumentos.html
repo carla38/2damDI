@@ -284,38 +284,35 @@
         }
 
         function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+			const file = event.target.files[0];
+			if (!file) return;
 
-            const name = file.name;
-            const ext = name.split('.').pop().toLowerCase();
-            let fileType = file.type || 'text/plain'; 
+			const name = file.name;
+			const ext = name.split('.').pop().toLowerCase();
+			let fileType = file.type || 'text/plain'; 
 
-            const pdfMimeType = 'application/pdf';
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				console.log("Archivo cargado:", { name, fileType, content: e.target.result });
+				navigate('viewer', { 
+					name: name, 
+					content: e.target.result, 
+					type: fileType, 
+					isEditing: editableExtensions.includes(ext),
+					originalContent: e.target.result
+				});
+				event.target.value = '';
+			};
 
-            if (ext === 'pdf') {
-                fileType = pdfMimeType;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const pdfDataUrl = e.target.result;
-                    navigate('viewer', { name: name, content: pdfDataUrl, type: fileType });
-                    event.target.value = '';
-                };
-                reader.readAsDataURL(file);
-            } else if (editableExtensions.includes(ext)) {
-                // Para todos los demás tipos de texto/código
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    // Usamos el contenido como texto sin formato para los archivos de código/texto genéricos
-                    navigate('viewer', { name: name, content: e.target.result, type: fileType, isEditing: false, originalContent: e.target.result });
-                    event.target.value = '';
-                };
-                reader.readAsText(file);
-            } else {
-                 showToast(`Tipo de archivo no permitido: ${ext}. Solo se permiten PDF o archivos de código/texto plano.`, true);
-                 event.target.value = ''; 
-            }
-        }
+			if (ext === 'pdf') {
+				reader.readAsDataURL(file);
+			} else if (editableExtensions.includes(ext)) {
+				reader.readAsText(file);
+			} else {
+				showToast(`Tipo de archivo no permitido: ${ext}.`, true);
+				event.target.value = '';
+			}
+		}
         
         function downloadFile(fileName, content, mimeType = 'text/plain') {
             try {
@@ -600,30 +597,40 @@
         
         // --- Renderizador Principal ---
         function renderApp() {
-            // 1. Renderizar la cabecera
-            const header = document.getElementById('app-header');
-            if (header) {
-                header.innerHTML = renderHeader();
-            }
+			// 1. Renderizar la cabecera
+			const header = document.getElementById('app-header');
+			if (header) {
+				header.innerHTML = renderHeader();
+			}
 
-            // 2. Renderizar la vista principal
-            let content = '';
-            switch (state.view) {
-                case 'home':
-                    content = renderHome();
-                    break;
-                case 'viewer':
-                case 'editor':
-                    content = renderViewer();
-                    break;
-                case 'library':
-                    content = renderLibrary();
-                    break;
-                default:
-                    content = renderHome();
-            }
-            appContainer.innerHTML = content;
-			 if (state.view === 'library') {
+			// 2. Renderizar la vista principal
+			let content = '';
+			switch (state.view) {
+				case 'home':
+					content = renderHome();
+					break;
+				case 'viewer':
+				case 'editor':
+					content = renderViewer();
+					break;
+				case 'library':
+					content = renderLibrary();
+					break;
+				default:
+					content = renderHome();
+			}
+			appContainer.innerHTML = content;
+
+			// --- RE-AGREGAR LISTENER AL INPUT DE ARCHIVO ---
+			if (state.view === 'home') {
+				const fileInput = document.getElementById('file-upload');
+				if (fileInput) {
+					fileInput.addEventListener('change', handleFileUpload);
+				}
+			}
+
+			// Código existente para la biblioteca
+			if (state.view === 'library') {
 				document.querySelectorAll('.btn-abrir').forEach(btn => {
 					btn.addEventListener('click', () => {
 						const fileId = btn.dataset.fileId;
@@ -645,7 +652,8 @@
 					});
 				});
 			}
-        }
+		}
+
 
         // --- Toast (Notificaciones) ---
         function showToast(message, isError = false) {
