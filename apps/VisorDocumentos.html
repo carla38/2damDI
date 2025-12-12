@@ -588,32 +588,7 @@
                     </div>
                 </div>
             `;
-			
-			appContainer.innerHTML = contentHTML;
 
-			// Asociar eventos a los botones recién creados
-			document.querySelectorAll('.btn-abrir').forEach(btn => {
-				btn.addEventListener('click', () => {
-					const fileId = btn.dataset.fileId;
-					const file = state.libraryFiles.find(f => f.id === fileId);
-					navigate('viewer', { ...file, isEditing: false });
-				});
-			});
-
-			document.querySelectorAll('.btn-clonar').forEach(btn => {
-				btn.addEventListener('click', () => {
-					const fileId = btn.dataset.fileId;
-					const file = state.libraryFiles.find(f => f.id === fileId);
-					cloneFile(file);
-				});
-			});
-
-			document.querySelectorAll('.btn-eliminar').forEach(btn => {
-				btn.addEventListener('click', () => {
-					const fileId = btn.dataset.fileId;
-					deleteFile(fileId);
-				});
-			});
         }
         
         // --- Renderizador Principal ---
@@ -641,6 +616,28 @@
                     content = renderHome();
             }
             appContainer.innerHTML = content;
+			 if (state.view === 'library') {
+				document.querySelectorAll('.btn-abrir').forEach(btn => {
+					btn.addEventListener('click', () => {
+						const fileId = btn.dataset.fileId;
+						const file = state.libraryFiles.find(f => f.id === fileId);
+						navigate('viewer', { ...file, isEditing: false });
+					});
+				});
+				document.querySelectorAll('.btn-clonar').forEach(btn => {
+					btn.addEventListener('click', () => {
+						const fileId = btn.dataset.fileId;
+						const file = state.libraryFiles.find(f => f.id === fileId);
+						cloneFile(file);
+					});
+				});
+				document.querySelectorAll('.btn-eliminar').forEach(btn => {
+					btn.addEventListener('click', () => {
+						const fileId = btn.dataset.fileId;
+						deleteFile(fileId);
+					});
+				});
+			}
         }
 
         // --- Toast (Notificaciones) ---
