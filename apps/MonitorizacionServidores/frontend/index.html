@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Control Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Dashboard de Control de Servidores</h1>
+            <p>Gestión de Máquinas Virtuales (VirtualBox)</p>
+            <div id="connection-status" class="status-badge disconnected">Backend: Desconectado</div>
+        </header>
+
+        <main id="vm-grid">
+            <!-- VM Cards will be injected here by JavaScript -->
+            <div class="loading">Cargando servidores...</div>
+        </main>
+    </div>
+
+    <!-- Template for a VM Card -->
+    <template id="vm-card-template">
+        <div class="vm-card">
+            <div class="vm-header">
+                <div class="vm-status-indicator"></div>
+                <h2 class="vm-name">VM Name</h2>
+                <span class="vm-state-badge">Unknown</span>
+            </div>
+
+            <div class="vm-body">
+                <!-- Config Block -->
+                <div class="vm-section config-section">
+                    <h3>Configuración</h3>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <span class="label">OS:</span> <span class="value val-os">--</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">CPU:</span> <span class="value val-cpus">--</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">RAM:</span> <span class="value val-mem">--</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">VRAM:</span> <span class="value val-vram">--</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">Firmware:</span> <span class="value val-firmware">--</span>
+                        </div>
+                        <div class="config-item full-width">
+                            <span class="label">Chipset:</span> <span class="value val-chipset">--</span>
+                        </div>
+                        <div class="config-item full-width">
+                            <span class="label">Accel:</span> <span class="value val-accel">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage & Network Block -->
+                <div class="vm-section details-section">
+                    <div class="details-col">
+                        <h3>Almacenamiento</h3>
+                        <ul class="val-disks list-clean">
+                            <!-- JS will inject <li> -->
+                            <li><em>Cargando...</em></li>
+                        </ul>
+                    </div>
+                    <div class="details-col">
+                        <h3>Red</h3>
+                        <ul class="val-network list-clean">
+                            <li><em>Cargando...</em></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Real-time Stats REMOVED as per request -->
+                <!-- <div class="vm-section stats-section"> ... </div> -->
+
+                <div class="controls">
+                    <button class="btn btn-start">Iniciar</button>
+                    <button class="btn btn-stop">Apagar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

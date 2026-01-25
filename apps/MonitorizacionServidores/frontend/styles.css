@@ -1,0 +1,379 @@
+:root {
+    --bg-color: #f3f4f6;
+    --text-color: #1f2937;
+    --card-bg: #ffffff;
+    --primary-color: #3b82f6;
+    --danger-color: #ef4444;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --gray-200: #e5e7eb;
+    --gray-500: #6b7280;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #111827;
+}
+
+header p {
+    color: var(--gray-500);
+    margin-top: 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+.status-badge.connected {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.disconnected {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+#vm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.vm-card {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--gray-200);
+}
+
+.vm-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.vm-header {
+    padding: 1.5rem;
+    background-color: #f9fafb;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.vm-status-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--gray-200);
+    box-shadow: 0 0 0 4px rgba(229, 231, 235, 0.4);
+}
+
+.status-running .vm-status-indicator {
+    background-color: var(--success-color);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.status-powered_off .vm-status-indicator,
+.status-aborted .vm-status-indicator {
+    background-color: var(--danger-color);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+}
+
+.status-saved .vm-status-indicator,
+.status-paused .vm-status-indicator {
+    background-color: var(--warning-color);
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+
+.vm-name {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.vm-body {
+    padding: 1.5rem;
+}
+
+.status-text {
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    text-transform: capitalize;
+}
+
+.metrics {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    background-color: #f3f4f6;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.metric .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.metric .value {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 1rem;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.btn {
+    padding: 0.75rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    font-family: inherit;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-start {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-start:hover:not(:disabled) {
+    background-color: #059669;
+}
+
+.btn-stop {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-stop:hover:not(:disabled) {
+    background-color: #dc2626;
+}
+
+.loading {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--gray-500);
+    padding: 4rem;
+    font-style: italic;
+}
+
+/* VM Details Sections */
+.vm-section {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.vm-section:last-of-type {
+    border-bottom: none;
+}
+
+.vm-section h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+/* Config Grid */
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.config-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.config-item.full-width {
+    grid-column: span 2;
+}
+
+.config-item .label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.config-item .value {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--border-color);
+}
+
+/* Details Section (Storage & Network) */
+.details-section {
+    display: flex;
+    gap: 1rem;
+}
+
+.details-col {
+    flex: 1;
+}
+
+.list-clean {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.list-clean li {
+    padding: 0.25rem 0;
+    border-bottom: 1px dotted var(--gray-200);
+}
+
+/* Metrics Grid - Enhanced */
+.stats-section.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    /* Allow pointer events if we want tooltip, but for now disable interaction implies simple display */
+}
+
+.metrics-grid {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.metric {
+    background: #f9fafb;
+    padding: 0.75rem;
+    border-radius: 8px;
+    flex: 1;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+    /* Override previous .metric display flex column center */
+    display: block;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.metric-status {
+    font-size: 0.8rem;
+    text-align: right;
+    margin-top: 0.25rem;
+}
+
+.text-warning {
+    color: var(--warning-color);
+}
+
+.text-success {
+    color: var(--success-color);
+}
+
+.text-muted {
+    color: var(--gray-500);
+}
+
+/* Status Badges */
+.vm-state-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.vm-state-badge.status-running {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.vm-state-badge.status-powered_off {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.vm-state-badge.status-saved {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.vm-state-badge.status-unknown {
+    background: #f3f4f6;
+    color: #4b5563;
+}
