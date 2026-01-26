@@ -12,16 +12,51 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1>Dashboard de Control de Servidores</h1>
-            <p>Gestión de Máquinas Virtuales (VirtualBox)</p>
-            <div id="connection-status" class="status-badge disconnected">Backend: Desconectado</div>
-        </header>
+        <!-- VISTA: LOGIN -->
+        <div id="login-view" class="view-section">
+            <div class="login-card">
+                <header>
+                    <h1>Acceso al Dashboard</h1>
+                    <p>Control de Servidores VirtualBox</p>
+                </header>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" placeholder="Ingrese usuario" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" placeholder="Ingrese contraseña" required>
+                    </div>
+                    <div id="login-error" class="error-message hidden">Usuario o contraseña incorrectos</div>
+                    <button type="submit" class="btn btn-primary full-width">Iniciar Sesión</button>
+                </form>
+                <div class="login-info">
+                    <p><strong>Credenciales de prueba:</strong></p>
+                    <p>Usuario: <code>admin</code></p>
+                    <p>Contraseña: <code>admin123</code></p>
+                </div>
+            </div>
+        </div>
 
-        <main id="vm-grid">
-            <!-- VM Cards will be injected here by JavaScript -->
-            <div class="loading">Cargando servidores...</div>
-        </main>
+        <!-- VISTA: DASHBOARD -->
+        <div id="dashboard-view" class="view-section hidden">
+            <header class="dashboard-header">
+                <div class="header-content">
+                    <div>
+                        <h1>Dashboard de Control</h1>
+                        <p>Gestión de Máquinas Virtuales (VirtualBox)</p>
+                    </div>
+                    <button id="btn-logout" class="btn btn-secondary">Cerrar Sesión</button>
+                </div>
+                <div id="connection-status" class="status-badge disconnected">Backend: Desconectado</div>
+            </header>
+
+            <main id="vm-grid">
+                <!-- VM Cards will be injected here by JavaScript -->
+                <div class="loading">Cargando servidores...</div>
+            </main>
+        </div>
     </div>
 
     <!-- Template for a VM Card -->
@@ -78,9 +113,6 @@
                         </ul>
                     </div>
                 </div>
-
-                <!-- Real-time Stats REMOVED as per request -->
-                <!-- <div class="vm-section stats-section"> ... </div> -->
 
                 <div class="controls">
                     <button class="btn btn-start">Iniciar</button>

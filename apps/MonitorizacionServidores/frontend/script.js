@@ -1,24 +1,30 @@
 const API_URL = 'http://localhost:8000';
 const POLLING_INTERVAL = 3000; // 3 seconds
 
+// Auth Credentials (Simulation)
+const CREDENTIALS = {
+    user: 'admin',
+    pass: 'admin123'
+};
+
 const vmGrid = document.getElementById('vm-grid');
 const connectionStatus = document.getElementById('connection-status');
 const template = document.getElementById('vm-card-template');
 
 // State to track processing VMs to prevent double clicks
 const processingVMs = new Set();
+let pollInterval = null;
 
-// Placeholders to ignore (mock data from backend if VBox not found)
-const IGNORED_VMS = new Set(['Web-Server-01', 'DB-Server-01', 'Test-Env']);
+function isLoggedIn() {
+    return localStorage.getItem('auth_session') === 'true';
+}
 
 async function fetchVMs() {
+    if (!isLoggedIn()) return;
     try {
         const response = await fetch(`${API_URL}/vms`);
         if (!response.ok) throw new Error('Network response was not ok');
-        let vms = await response.json();
-
-        // Filter out placeholders
-        vms = vms.filter(vm => !IGNORED_VMS.has(vm.name));
+        const vms = await response.json();
 
         updateSystemStatus(true);
         renderVMs(vms);
@@ -44,36 +50,11 @@ function updateSystemStatus(isOnline) {
 }
 
 function renderVMs(vms) {
-    // If first load (checking by looking for existing cards), clear loading
-    // But better: Diff logic or simple re-render. 
-    // For simplicity, we'll re-render but try to keep order safe. 
-    // In a React app we'd use state, here we simply clear and rebuild OR update existing elements.
-    // To avoid flickering, let's try to update if exists.
-
-    // Clear loading/error message if present
-    const isErrorOrLoading = vmGrid.innerHTML.includes('Cargando') || vmGrid.innerHTML.includes('Error');
-    if (isErrorOrLoading) {
+    if (vmGrid.innerHTML.includes('Cargando') || vmGrid.innerHTML.includes('Error')) {
         vmGrid.innerHTML = '';
     }
 
-    // Handle Empty State
-    if (vms.length === 0) {
-        vmGrid.innerHTML = `
-            <div class="empty-state">
-                <h3>No hay servidores configurados</h3>
-                <p>El backend no detecta ninguna máquina virtual de VirtualBox.</p>
-            </div>
-        `;
-        return;
-    }
-
-    // If we have VMs, remove any previous empty state
-    const emptyState = vmGrid.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-
-    const currentCardIds = Array.from(vmGrid.children).map(c => c.dataset.vmName).filter(Boolean);
+    const currentCardIds = Array.from(vmGrid.children).map(c => c.dataset.vmName);
     const newVmNames = vms.map(v => v.name);
 
     // Remove old cards
@@ -192,10 +173,6 @@ async function updateCard(card, vm) {
             console.error("Error fetching details", e);
         }
     }
-
-    // --- REAL TIME STATS REMOVED ---
-    // Metrics require Guest Additions or complex Host lookups which are unreliable/unavailable.
-    // Removed to keep UI clean per user request.
 }
 
 async function controlVM(name, action) {
@@ -256,5 +233,64 @@ async function controlVM(name, action) {
 }
 
 // Start Polling
-fetchVMs();
-setInterval(fetchVMs, POLLING_INTERVAL);
+// --- AUTHENTICATION LOGIC ---
+
+function login(user, pass) {
+    const errorMsg = document.getElementById('login-error');
+    if (user === CREDENTIALS.user && pass === CREDENTIALS.pass) {
+        localStorage.setItem('auth_session', 'true');
+        errorMsg.classList.add('hidden');
+        updateView();
+    } else {
+        errorMsg.classList.remove('hidden');
+    }
+}
+
+function logout() {
+    localStorage.removeItem('auth_session');
+    // Clear grid to prevent stale data flashing
+    vmGrid.innerHTML = '<div class="loading">Cargando servidores...</div>';
+    updateView();
+}
+
+function updateView() {
+    const loginView = document.getElementById('login-view');
+    const dashboardView = document.getElementById('dashboard-view');
+
+    if (isLoggedIn()) {
+        loginView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+
+        // Start Polling
+        fetchVMs();
+        if (!pollInterval) {
+            pollInterval = setInterval(fetchVMs, POLLING_INTERVAL);
+        }
+    } else {
+        loginView.classList.remove('hidden');
+        dashboardView.classList.add('hidden');
+
+        // Stop Polling
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
+}
+
+// Event Listeners
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = document.getElementById('username').value;
+    const pass = document.getElementById('password').value;
+    login(user, pass);
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+    logout();
+});
+
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    updateView();
+});
