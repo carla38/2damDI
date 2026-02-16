@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WalletFlow - Finanzas Personales</title>
+
+    <!-- PWA / Capacitor-ready meta tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="Gestiona tus finanzas personales con estilo">
+
+    <!-- Fuentes: Inter para un look moderno -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Iconos: Phosphor Icons (Ligeros y bonitos) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Estilos de la aplicación -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Supabase Client (CDN) - Sin módulos para compatibilidad file:// -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Chart.js (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body data-theme="light">
+
+    <!-- App Container -->
+    <div id="app">
+        <!-- Global Loading Screen -->
+        <div id="loading-screen" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Cargando WalletFlow...</p>
+        </div>
+
+        <!-- Sidebar Navigation (Desktop) / Bottom Nav (Mobile) -->
+        <nav id="main-nav" class="hidden">
+            <div class="nav-logo">
+                <i class="ph ph-wallet"></i>
+                <span>WalletFlow</span>
+            </div>
+            <ul class="nav-links">
+                <li data-target="dashboard" class="active">
+                    <i class="ph ph-squares-four"></i>
+                    <span data-i18n="nav.dashboard">Dashboard</span>
+                </li>
+                <li data-target="transactions">
+                    <i class="ph ph-list-dashes"></i>
+                    <span data-i18n="nav.transactions">Transacciones</span>
+                </li>
+                <li data-target="categories">
+                    <i class="ph ph-tag"></i>
+                    <span data-i18n="nav.categories">Categorías</span>
+                </li>
+                <li data-target="stats">
+                    <i class="ph ph-chart-pie-slice"></i>
+                    <span data-i18n="nav.stats">Estadísticas</span>
+                </li>
+                <li data-target="profile">
+                    <i class="ph ph-user-gear"></i>
+                    <span data-i18n="nav.profile">Perfil</span>
+                </li>
+            </ul>
+            <div class="nav-footer">
+                <button id="logout-btn">
+                    <i class="ph ph-sign-out"></i>
+                    <span data-i18n="auth.logout">Salir</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Bottom Navigation (Mobile only, mirrors sidebar) -->
+        <nav id="bottom-nav" class="bottom-nav hidden">
+            <ul class="bottom-nav-links">
+                <li data-target="dashboard" class="active">
+                    <i class="ph ph-squares-four"></i>
+                    <span data-i18n="nav.dashboard">Dashboard</span>
+                </li>
+                <li data-target="transactions">
+                    <i class="ph ph-list-dashes"></i>
+                    <span data-i18n="nav.transactions">Transacciones</span>
+                </li>
+                <li data-target="categories">
+                    <i class="ph ph-tag"></i>
+                    <span data-i18n="nav.categories">Categorías</span>
+                </li>
+                <li data-target="stats">
+                    <i class="ph ph-chart-pie-slice"></i>
+                    <span data-i18n="nav.stats">Estadísticas</span>
+                </li>
+                <li data-target="profile">
+                    <i class="ph ph-user-gear"></i>
+                    <span data-i18n="nav.profile">Perfil</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Header Mobile -->
+            <header class="mobile-header">
+                <div class="logo">WalletFlow</div>
+                <button id="mobile-menu-toggle"><i class="ph ph-list"></i></button>
+            </header>
+
+            <!-- VISTAS DE LA APLICACIÓN -->
+
+            <!-- 1. Auth Views (Redesigned) -->
+
+            <!-- 1a. Landing: Choice -->
+            <div id="view-auth-landing" class="view hidden">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div class="nav-logo" style="justify-content: center; margin-bottom: 0.5rem;">
+                            <i class="ph ph-wallet"></i>
+                            <span>WalletFlow</span>
+                        </div>
+                        <h1 data-i18n="auth.welcome">Bienvenido</h1>
+                        <p data-i18n="auth.subtitle">Gestiona tus finanzas con estilo</p>
+
+                        <div class="choice-container">
+                            <div class="choice-btn" onclick="App.UI.showScreen('login')">
+                                <i class="ph ph-sign-in"></i>
+                                <span data-i18n="auth.login_action">Iniciar Sesión</span>
+                            </div>
+                            <div class="choice-btn" onclick="App.UI.showScreen('register')">
+                                <i class="ph ph-user-plus"></i>
+                                <span data-i18n="auth.register_action">Crear Cuenta</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1b. Login -->
+            <div id="view-login" class="view hidden">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <h2 data-i18n="auth.login_title">Iniciar Sesión</h2>
+                        <p data-i18n="auth.login_desc">Ingresa a tu cuenta</p>
+
+                        <form id="login-form">
+                            <div class="form-group">
+                                <label data-i18n="auth.email">Email</label>
+                                <input type="email" id="login-email" placeholder="hola@ejemplo.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="auth.password">Contraseña</label>
+                                <input type="password" id="login-password" placeholder="••••••••" required>
+                            </div>
+                            <button type="submit" class="btn-primary" id="login-btn">
+                                <span data-i18n="auth.login_action">Entrar</span>
+                            </button>
+                        </form>
+
+                        <div style="margin-top: 1rem;">
+                            <button class="btn-outline" onclick="App.UI.showScreen('auth-landing')">
+                                <i class="ph ph-arrow-left"></i> <span data-i18n="common.back">Volver</span>
+                            </button>
+                        </div>
+                        <div id="login-message" class="message hidden" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1c. Register -->
+            <div id="view-register" class="view hidden">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <h2 data-i18n="auth.register_title">Crear Cuenta</h2>
+                        <p data-i18n="auth.register_desc">Únete y controla tus gastos</p>
+
+                        <form id="register-form">
+                            <div class="form-group">
+                                <label data-i18n="auth.email">Email</label>
+                                <input type="email" id="register-email" placeholder="hola@ejemplo.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="auth.password">Contraseña</label>
+                                <input type="password" id="register-password" placeholder="••••••••" required>
+                            </div>
+                            <button type="submit" class="btn-primary" id="register-btn">
+                                <span data-i18n="auth.register_action">Registrarse</span>
+                            </button>
+                        </form>
+
+                        <div style="margin-top: 1rem;">
+                            <button class="btn-outline" onclick="App.UI.showScreen('auth-landing')">
+                                <i class="ph ph-arrow-left"></i> <span data-i18n="common.back">Volver</span>
+                            </button>
+                        </div>
+                        <div id="register-message" class="message hidden" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1d. Success -->
+            <div id="view-auth-success" class="view hidden">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div style="color: var(--success); font-size: 3rem; margin-bottom: 1rem;">
+                            <i class="ph ph-envelope-simple-open"></i>
+                        </div>
+                        <h2 data-i18n="auth.success_title">¡Casi listo!</h2>
+                        <p data-i18n="auth.success_desc">Hemos enviado un enlace de confirmación a tu correo
+                            electrónico.</p>
+                        <div class="alert-box"
+                            style="background: #eff6ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; font-size: 0.9rem; color: #1e40af;">
+                            <i class="ph ph-info" style="margin-right:0.5rem"></i>
+                            <span data-i18n="auth.success_hint">Revisa tu bandeja de entrada (y spam) y haz clic en el
+                                enlace para activar tu
+                                cuenta.</span>
+                        </div>
+                        <button class="btn-primary" onclick="App.UI.showScreen('login')">
+                            <i class="ph ph-sign-in"></i> <span data-i18n="auth.success_btn">Ir a Iniciar Sesión</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1e. Confirmed -->
+            <div id="view-auth-confirmed" class="view hidden">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div style="color: var(--success); font-size: 3rem; margin-bottom: 1rem;">
+                            <i class="ph ph-check-circle"></i>
+                        </div>
+                        <h2 data-i18n="auth.confirmed_title">¡Cuenta Verificada!</h2>
+                        <p data-i18n="auth.confirmed_desc">Tu email ha sido confirmado exitosamente.</p>
+                        <button class="btn-primary" onclick="App.UI.showScreen('login')">
+                            <i class="ph ph-sign-in"></i> <span data-i18n="auth.confirmed_btn">Iniciar Sesión
+                                Ahora</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Dashboard -->
+            <div id="view-dashboard" class="view hidden">
+                <div class="section-header">
+                    <i class="ph ph-squares-four"></i>
+                    <h2 data-i18n="dashboard.title">Resumen</h2>
+                </div>
+                <header class="page-header">
+                    <div></div>
+                    <button class="btn-primary" onclick="App.UI.showModal('modal-transaction')">
+                        <i class="ph ph-plus"></i> <span data-i18n="common.add">Añadir</span>
+                    </button>
+                </header>
+
+                <div class="dashboard-content-centered">
+                    <div class="stats-grid">
+                        <div class="stat-card balance">
+                            <span class="label" data-i18n="dashboard.balance">Balance Total</span>
+                            <h3 id="total-balance">€ 0.00</h3>
+                        </div>
+                        <div class="stat-card income">
+                            <span class="label" data-i18n="dashboard.income">Ingresos</span>
+                            <h3 id="total-income">€ 0.00</h3>
+                        </div>
+                        <div class="stat-card expense">
+                            <span class="label" data-i18n="dashboard.expense">Gastos</span>
+                            <h3 id="total-expense">€ 0.00</h3>
+                        </div>
+                    </div>
+
+                    <div class="section-title">
+                        <h3 data-i18n="dashboard.recent">Recientes</h3>
+                        <!-- "Ver todo" removed as requested -->
+                    </div>
+
+                    <div id="dashboard-list" class="transaction-list">
+                        <!-- Javascript will populate this -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Transactions List -->
+            <div id="view-transactions" class="view hidden">
+                <div class="section-header">
+                    <i class="ph ph-list-dashes"></i>
+                    <h2 data-i18n="nav.transactions">Transacciones</h2>
+                </div>
+
+                <!-- Search & Filter Bar -->
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" id="search-transactions" data-i18n-placeholder="common.search"
+                            placeholder="Buscar...">
+                    </div>
+                    <div class="filters">
+                        <select id="filter-month">
+                            <option value="all" data-i18n="filter.all_time">Todo el tiempo</option>
+                            <!-- JS will populate months -->
+                        </select>
+                        <select id="filter-type">
+                            <option value="all" data-i18n="filter.all_types">Todos</option>
+                            <option value="income" data-i18n="common.income">Ingresos</option>
+                            <option value="expense" data-i18n="common.expense">Gastos</option>
+                        </select>
+                        <select id="filter-category">
+                            <option value="all" data-i18n="filter.all_categories">Todas categorías</option>
+                            <!-- JS will populate -->
+                        </select>
+                    </div>
+                </div>
+
+                <div id="transactions-list-full" class="transaction-list"></div>
+            </div>
+
+            <!-- 4. Categories -->
+            <div id="view-categories" class="view hidden">
+                <div class="section-header">
+                    <i class="ph ph-tag"></i>
+                    <h2 data-i18n="nav.categories">Categorías</h2>
+                </div>
+                <header class="page-header">
+                    <div></div>
+                    <button class="btn-primary" onclick="App.UI.showModal('modal-category')">
+                        <i class="ph ph-plus"></i> <span data-i18n="common.new">Nueva</span>
+                    </button>
+                </header>
+
+                <!-- Category Filters -->
+                <div class="filters-bar" style="margin-bottom: 1rem; box-shadow: none;">
+                    <button class="btn-filter active" id="cat-btn-all" onclick="App.UI.filterCategories('all')"
+                        data-i18n="filter.all_types">Todos</button>
+                    <button class="btn-filter" id="cat-btn-expense" onclick="App.UI.filterCategories('expense')"
+                        data-i18n="categories.expense">Gastos</button>
+                    <button class="btn-filter" id="cat-btn-income" onclick="App.UI.filterCategories('income')"
+                        data-i18n="categories.income">Ingresos</button>
+                </div>
+
+                <div id="categories-container-wrapper">
+                    <!-- Ingresos Column -->
+                    <div id="cat-col-income" class="cat-column hidden">
+                        <h3 class="section-subtitle" data-i18n="categories.income">Ingresos</h3>
+                        <div id="categories-list-income" class="categories-grid"></div>
+                    </div>
+
+                    <!-- Gastos Column -->
+                    <div id="cat-col-expense" class="cat-column hidden">
+                        <h3 class="section-subtitle" data-i18n="categories.expense">Gastos</h3>
+                        <div id="categories-list-expense" class="categories-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Statistics -->
+            <div id="view-stats" class="view hidden">
+                <div class="section-header">
+                    <i class="ph ph-chart-pie-slice"></i>
+                    <h2 data-i18n="nav.stats">Estadísticas</h2>
+                </div>
+
+                <div class="stats-sections-wrapper">
+
+                    <!-- ═══════════ SECTION 1: Category Breakdown ═══════════ -->
+                    <div class="stats-section">
+                        <div class="stats-section-header">
+                            <i class="ph ph-chart-pie-slice"></i>
+                            <h3 data-i18n="stats.section_categories">Distribución por Categoría</h3>
+                        </div>
+                        <div class="stats-controls-row">
+                            <!-- Type filter: Expenses / Income / Both -->
+                            <div class="stats-btn-group">
+                                <button class="stats-btn active" data-cat-filter="expense"
+                                    onclick="App.UI.setCategoryFilter('expense')">
+                                    <i class="ph ph-arrow-up-right"></i>
+                                    <span data-i18n="stats.filter_expenses">Gastos</span>
+                                </button>
+                                <button class="stats-btn" data-cat-filter="income"
+                                    onclick="App.UI.setCategoryFilter('income')">
+                                    <i class="ph ph-arrow-down-left"></i>
+                                    <span data-i18n="stats.filter_income">Ingresos</span>
+                                </button>
+                                <button class="stats-btn" data-cat-filter="both"
+                                    onclick="App.UI.setCategoryFilter('both')">
+                                    <i class="ph ph-arrows-left-right"></i>
+                                    <span data-i18n="stats.filter_both">Ambos</span>
+                                </button>
+                            </div>
+                            <!-- Chart type toggle -->
+                            <div class="stats-btn-group">
+                                <button class="stats-btn active" data-chart-type="bar"
+                                    onclick="App.UI.setCategoryChartType('bar')">
+                                    <i class="ph ph-chart-bar"></i>
+                                    <span data-i18n="stats.chart_bar">Barras</span>
+                                </button>
+                                <button class="stats-btn" data-chart-type="doughnut"
+                                    onclick="App.UI.setCategoryChartType('doughnut')">
+                                    <i class="ph ph-chart-pie-slice"></i>
+                                    <span data-i18n="stats.chart_doughnut">Circular</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stats-chart-wrapper">
+                            <canvas id="chart-categories"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ SECTION 2: Balance by Period ═══════════ -->
+                    <div class="stats-section">
+                        <div class="stats-section-header">
+                            <i class="ph ph-scales"></i>
+                            <h3 data-i18n="stats.section_balance">Balance por Período</h3>
+                        </div>
+                        <div class="stats-controls-row">
+                            <div class="stats-btn-group">
+                                <button class="stats-btn" data-period="weekly"
+                                    onclick="App.UI.setBalancePeriod('weekly')">
+                                    <span data-i18n="stats.period_weekly">Semanal</span>
+                                </button>
+                                <button class="stats-btn active" data-period="monthly"
+                                    onclick="App.UI.setBalancePeriod('monthly')">
+                                    <span data-i18n="stats.period_monthly">Mensual</span>
+                                </button>
+                                <button class="stats-btn" data-period="annual"
+                                    onclick="App.UI.setBalancePeriod('annual')">
+                                    <span data-i18n="stats.period_annual">Anual</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stats-chart-wrapper">
+                            <canvas id="chart-balance"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ SECTION 3: Timeline Evolution ═══════════ -->
+                    <div class="stats-section">
+                        <div class="stats-section-header">
+                            <i class="ph ph-trend-up"></i>
+                            <h3 data-i18n="stats.section_timeline">Evolución Temporal</h3>
+                        </div>
+                        <div class="stats-controls-row">
+                            <div class="stats-btn-group">
+                                <button class="stats-btn" data-timeline-period="weekly"
+                                    onclick="App.UI.setTimelinePeriod('weekly')">
+                                    <span data-i18n="stats.period_weekly">Semanal</span>
+                                </button>
+                                <button class="stats-btn active" data-timeline-period="monthly"
+                                    onclick="App.UI.setTimelinePeriod('monthly')">
+                                    <span data-i18n="stats.period_monthly">Mensual</span>
+                                </button>
+                                <button class="stats-btn" data-timeline-period="annual"
+                                    onclick="App.UI.setTimelinePeriod('annual')">
+                                    <span data-i18n="stats.period_annual">Anual</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="stats-chart-wrapper">
+                            <canvas id="chart-timeline"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ SECTION 4: Top 5 Transactions ═══════════ -->
+                    <div class="stats-section">
+                        <div class="stats-section-header">
+                            <i class="ph ph-trophy"></i>
+                            <h3 data-i18n="stats.section_top">Top 5 Transacciones</h3>
+                        </div>
+                        <div id="top-transactions-list" class="top-transactions-list">
+                            <!-- JS populated -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- 6. Profile -->
+            <div id="view-profile" class="view hidden">
+                <div class="section-header">
+                    <i class="ph ph-user-gear"></i>
+                    <h2 data-i18n="nav.profile">Perfil</h2>
+                </div>
+                <div class="profile-card">
+                    <div class="avatar-placeholder">
+                        <i class="ph ph-user"></i>
+                    </div>
+                    <p id="user-email-display">usuario@email.com</p>
+
+                    <div class="settings-group">
+                        <label data-i18n="settings.language">Idioma</label>
+                        <select id="language-selector">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+
+                    <!-- Personalización -->
+                    <div class="settings-group">
+                        <label>Personalización</label>
+                        <div style="margin-bottom: 0.75rem;">
+                            <span
+                                style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Modo
+                                de apariencia</span>
+                            <div class="theme-palette" id="theme-palette">
+                                <div class="theme-swatch active" data-theme="light" title="Modo claro">
+                                    <i class="ph ph-sun"></i>
+                                </div>
+                                <div class="theme-swatch" data-theme="dark" title="Modo oscuro">
+                                    <i class="ph ph-moon"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <span
+                                style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Color
+                                principal</span>
+                            <div class="color-palette" id="color-palette">
+                                <div class="color-swatch active" data-color="blue" title="Azul"></div>
+                                <div class="color-swatch" data-color="green" title="Verde"></div>
+                                <div class="color-swatch" data-color="purple" title="Púrpura"></div>
+                                <div class="color-swatch" data-color="red" title="Rojo"></div>
+                                <div class="color-swatch" data-color="orange" title="Naranja"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Zona peligrosa -->
+                    <div class="danger-zone">
+                        <p><i class="ph ph-warning"></i> <span data-i18n="settings.danger_zone">Zona peligrosa</span>
+                        </p>
+                        <button class="btn-danger" id="btn-delete-data" onclick="App.UI.showDeleteDataModal()">
+                            <i class="ph ph-eraser"></i> <span data-i18n="settings.delete_data">Borrar datos</span>
+                        </button>
+                    </div>
+
+                    <!-- Logout button (accesible en móvil desde perfil) -->
+                    <div class="profile-logout">
+                        <button id="logout-btn-profile" class="btn-danger">
+                            <i class="ph ph-sign-out"></i>
+                            <span data-i18n="auth.logout">Cerrar Sesión</span>
+                        </button>
+                    </div>
+
+                    <p class="app-version" data-i18n="profile.version_text">Versión 1.1.0</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" class="modal-overlay hidden">
+
+        <!-- Transaction Modal (Add) -->
+        <div id="modal-transaction" class="modal hidden">
+            <div class="modal-header">
+                <h3 data-i18n="transaction.new_title">Nueva Transacción</h3>
+                <button class="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="transaction-form">
+                    <div class="form-group">
+                        <label data-i18n="common.type">Tipo</label>
+                        <div class="type-selector">
+                            <input type="radio" name="type" value="expense" id="type-expense" checked>
+                            <label for="type-expense" class="radio-label" data-i18n="common.expense">Gasto</label>
+
+                            <input type="radio" name="type" value="income" id="type-income">
+                            <label for="type-income" class="radio-label" data-i18n="common.income">Ingreso</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.amount">Cantidad (€)</label>
+                        <input type="number" id="t-amount" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.description">Descripción</label>
+                        <input type="text" id="t-description" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.date">Fecha</label>
+                        <input type="date" id="t-date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.category">Categoría</label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <select id="t-category" required style="flex:1">
+                                <!-- Populated via JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Archivo adjunto -->
+                    <div class="form-group">
+                        <label><i class="ph ph-paperclip"></i> Archivo adjunto</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="t-file"
+                                accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg">
+                        </div>
+                        <div id="t-file-error" class="file-error hidden"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel close-modal" data-i18n="common.cancel">Cancelar</button>
+                        <button type="submit" class="btn-primary" data-i18n="common.save">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Transaction Modal -->
+        <div id="modal-edit-transaction" class="modal hidden">
+            <div class="modal-header">
+                <h3 data-i18n="transaction.edit_title">Editar Transacción</h3>
+                <button class="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-transaction-form">
+                    <input type="hidden" id="e-id">
+
+                    <div class="form-group">
+                        <label data-i18n="common.type">Tipo</label>
+                        <input type="text" id="e-type-display" disabled style="background:#f3f4f6; color:#6b7280;">
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.amount">Cantidad (€)</label>
+                        <input type="number" id="e-amount" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.description">Descripción</label>
+                        <input type="text" id="e-description" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.date">Fecha</label>
+                        <input type="date" id="e-date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="common.category">Categoría</label>
+                        <select id="e-category" required>
+                            <!-- JS Populated -->
+                        </select>
+                    </div>
+
+                    <!-- Archivo adjunto (edición) -->
+                    <div class="form-group">
+                        <label><i class="ph ph-paperclip"></i> Archivo adjunto</label>
+                        <div id="e-current-file"></div>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="e-file"
+                                accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg">
+                        </div>
+                        <div id="e-file-error" class="file-error hidden"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel close-modal" data-i18n="common.cancel">Cancelar</button>
+                        <button type="submit" class="btn-primary" data-i18n="common.update">Actualizar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Category Modal -->
+        <div id="modal-category" class="modal hidden">
+            <div class="modal-header">
+                <h3 data-i18n="category.new_title">Nueva Categoría</h3>
+                <button class="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="category-form">
+                    <div class="form-group">
+                        <label data-i18n="common.type">Tipo</label>
+                        <div class="type-selector">
+                            <input type="radio" name="c-type" value="expense" id="c-type-expense" checked>
+                            <label for="c-type-expense" class="radio-label" data-i18n="common.expense">Gasto</label>
+
+                            <input type="radio" name="c-type" value="income" id="c-type-income">
+                            <label for="c-type-income" class="radio-label" data-i18n="common.income">Ingreso</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="common.name">Nombre</label>
+                        <input type="text" id="c-name" placeholder="Ej. Viajes, Bonus..." required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel close-modal" data-i18n="common.cancel">Cancelar</button>
+                        <button type="submit" class="btn-primary" data-i18n="common.create">Crear</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="modal-delete" class="modal hidden">
+            <div class="modal-header-danger">
+                <h3><i class="ph ph-warning"></i> <span data-i18n="delete.title">Eliminar</span></h3>
+                <button class="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body modal-body-danger">
+                <p data-i18n="delete.confirm_msg">¿Estás seguro de que deseas eliminar este elemento? Esta acción no se
+                    puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel close-modal" data-i18n="common.cancel">Cancelar</button>
+                <button type="button" id="confirm-delete-btn" class="btn-danger" data-i18n="common.delete">
+                    <i class="ph ph-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+
+        <!-- Delete Data Modal -->
+        <div id="modal-delete-data" class="modal hidden">
+            <div class="modal-header-danger">
+                <h3><i class="ph ph-warning"></i> <span data-i18n="settings.delete_data_title">Borrar datos</span></h3>
+                <button class="close-modal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body modal-body-danger">
+                <!-- Confirmación directa -->
+                <div id="delete-data-confirm">
+                    <p data-i18n="settings.delete_data_warning">Se eliminarán permanentemente todas tus transacciones,
+                        categorías y archivos. Esta acción es irreversible.</p>
+                    <ul style="text-align:left; margin: 1rem 0 1rem 1.5rem; line-height: 1.8;">
+                        <li data-i18n="settings.delete_item_transactions">Todas tus transacciones</li>
+                        <li data-i18n="settings.delete_item_categories">Todas tus categorías</li>
+                        <li data-i18n="settings.delete_item_files">Todos tus archivos adjuntos</li>
+                    </ul>
+                    <p style="font-weight:700;" data-i18n="settings.delete_data_irreversible">Tu cuenta NO será
+                        eliminada. Solo tus datos.</p>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel close-modal" data-i18n="common.cancel">Cancelar</button>
+                        <button type="button" class="btn-danger" id="btn-delete-data-confirm">
+                            <i class="ph ph-eraser"></i> <span data-i18n="settings.delete_data">Borrar datos</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Loading -->
+                <div id="delete-data-loading" class="hidden">
+                    <div class="delete-progress">
+                        <div class="spinner"></div>
+                        <p id="delete-data-progress-text" data-i18n="settings.delete_data_progress">Eliminando datos...
+                        </p>
+                    </div>
+                </div>
+                <!-- Success -->
+                <div id="delete-data-success" class="hidden" style="text-align:center; padding: 1.5rem 0;">
+                    <div style="color: var(--success); font-size: 3rem; margin-bottom: 1rem;">
+                        <i class="ph ph-check-circle"></i>
+                    </div>
+                    <p style="font-weight:600; font-size: 1.1rem;" data-i18n="settings.delete_data_success">Todos tus
+                        datos han sido eliminados correctamente.</p>
+                    <div class="modal-footer" style="justify-content: center;">
+                        <button type="button" class="btn-primary close-modal" data-i18n="common.accept">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Image Lightbox Overlay -->
+    <div id="image-lightbox" class="lightbox-overlay hidden" onclick="App.UI.closeLightbox(event)">
+        <button class="lightbox-close" onclick="App.UI.closeLightbox(event, true)" aria-label="Cerrar">
+            <i class="ph ph-x"></i>
+        </button>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Imagen ampliada">
+    </div>
+
+    <!-- Scripts: Carga secuencial IMPORTANTE para evitar módulos -->
+    <script src="js/config.js"></script>
+    <script src="js/globals.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/app.js"></script> <!-- Main Entry -->
+
+</body>
+
+</html>
